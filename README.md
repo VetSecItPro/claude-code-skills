@@ -10,6 +10,8 @@ A complete SDLC automation framework: plan, build, design, test, secure, and shi
 
 ## Quick Install
 
+Run this in your terminal (outside of Claude Code, in a standard shell session):
+
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/VetSecItPro/claude-code-skills/main/install.sh)
 ```
