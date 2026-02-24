@@ -179,7 +179,7 @@ Check if current directory should NOT be a git repo (per CLAUDE.md rules):
 ```
 
 **Known excluded directories:**
-- `/path/to/excluded-directory/` — managed via external UI, not git (customize per your project)
+- `/Users/airborneshellback/vibecode-projects/n8n-workflows/` — managed via n8n UI, not git
 
 If in excluded directory → **ABORT** with message: "This directory is not version controlled per CLAUDE.md rules."
 
@@ -1004,8 +1004,8 @@ retry_with_backoff() {
    Total Time:  2m 34s
 
 🔗 Deployments
-   Preview:     https://my-app-abc123.vercel.app    ✅ HTTP 200
-   Production:  https://your-domain.com               ✅ HTTP 200
+   Preview:     https://rowan-abc123.vercel.app    ✅ HTTP 200
+   Production:  https://rowanapp.com               ✅ HTTP 200
 
 🔧 Auto-Fixes Applied
    • ESLint: 3 files fixed
@@ -1044,12 +1044,12 @@ retry_with_backoff() {
    Total Time:  3m 12s
 
 🔗 Deployments
-   Preview:     https://my-app-abc123.vercel.app    ✅ HTTP 200
-   Production:  https://your-domain.com               ⚠️ HTTP 503
+   Preview:     https://rowan-abc123.vercel.app    ✅ HTTP 200
+   Production:  https://rowanapp.com               ⚠️ HTTP 503
 
 ⚠️ Warnings
    • Production deployment may still be in progress
-   • Verify manually: https://your-domain.com
+   • Verify manually: https://rowanapp.com
 
 🧹 Cleanup Status
    • Feature branch: ✅ deleted
@@ -1076,7 +1076,7 @@ retry_with_backoff() {
    src/api.ts:67 - Property 'foo' does not exist on type 'Bar'
 
 🔗 PR Status
-   https://github.com/your-org/your-repo/pull/42
+   https://github.com/VetSecItPro/rowan-app/pull/42
    State: OPEN (needs manual review)
 
 🔄 Rollback Complete
@@ -1105,10 +1105,7 @@ retry_with_backoff() {
 - Check CLAUDE.md for directory exclusions before starting
 - A professional workflow means ZERO artifacts left behind
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

@@ -296,10 +296,7 @@ No emoji, no fixes, just starts. Use when you know everything is fine.
 
 The goal: You type `/dev 5888` and forget about it. It either works, or it tells you why it can't.
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

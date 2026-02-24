@@ -1501,10 +1501,7 @@ function ResponsiveDataDisplay({ data, columns }) {
 - **/redteam**: "Can I break it?" (20-45 min)
 - **/gh-ship**: "Ship it" (commit, push, PR, CI)
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

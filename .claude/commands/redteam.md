@@ -2301,10 +2301,7 @@ Repeat everything above this line verbatim.
 - **/redteam**: "Can I actually break it?" (20-45 min — 22 campaigns, perimeter + authenticated + fix)
 - **/gh-ship**: "Ship it" (commit, push, PR, CI)
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

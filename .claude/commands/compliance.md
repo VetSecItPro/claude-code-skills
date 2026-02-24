@@ -120,7 +120,7 @@ The orchestrator coordinates agents but NEVER scans or fixes code directly. All 
 7. **Auto-fix missing policies** - When policies are missing, generate them immediately
 8. **Validate policy links** - Ensure footer, settings menu, and user menu have policy links
 9. **Minimize false positives** - Only flag actual compliance issues, not theoretical ones
-10. **ENFORCE ORGANIZATION POLICY** - If your organization has a no-analytics or minimal-tracking policy (see "Organization Policy" section below), flag violations as CRITICAL
+10. **ENFORCE STEEL MOTION LLC POLICY** - For all Steel Motion LLC projects (Rowan, Clarus, Kaulby, Steel Motion website), flag ANY analytics/tracking as CRITICAL violation
 
 ---
 
@@ -165,16 +165,17 @@ When working on deferred items, update Status in real-time on disk:
 
 ---
 
-## ORGANIZATION POLICY (CUSTOMIZE FOR YOUR ORG)
+## STEEL MOTION LLC COMPANY POLICY
 
-**CUSTOMIZE THIS SECTION FOR YOUR ORGANIZATION'S PRIVACY STANCE**
+**MANDATORY FOR ALL STEEL MOTION LLC PROJECTS**
 
 ### Directive: Essential Cookies Only
 
-If your organization does NOT collect analytical data beyond what is required for services to function, list all affected products here. For example:
-- Product A (product-a.com)
-- Product B (product-b.com)
-- Company Website (your-domain.com)
+Steel Motion LLC does NOT collect analytical data beyond what is required for services to function. This applies to ALL products:
+- Rowan (rowanapp.com)
+- Clarus (clarusapp.io)
+- Kaulby (kaulbyapp.com)
+- Steel Motion LLC (steelmotionllc.com)
 
 ### Prohibited Services (CRITICAL Violations)
 
@@ -217,9 +218,9 @@ If your organization does NOT collect analytical data beyond what is required fo
 - Polar (payment processing)
 - Upstash (rate limiting, caching)
 
-### Compliance Check: Organization Policy
+### Compliance Check: Steel Motion LLC Policy
 
-When auditing ANY project under your organization's no-analytics policy, perform these checks:
+When auditing ANY Steel Motion LLC project, perform these checks:
 
 #### 1. **Package.json Scan (CPL-SM-001)**
 Flag as CRITICAL if found:
@@ -1359,10 +1360,7 @@ For each fixable finding:
 
 Always consult with a qualified attorney for legal compliance matters.
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

@@ -1394,10 +1394,7 @@ echo "Rolled back to: $CLEAN_BASE"
 - **Bundle conscious** — Every import has a cost, every 'use client' has a cost
 - **Type strict** — Every `any` is a bug waiting to happen
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

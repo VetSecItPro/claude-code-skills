@@ -64,7 +64,7 @@ After each skill completes, immediately update the scorecard file:
 This file tracks:
 ```json
 {
-  "project": "my-app",
+  "project": "rowan-app",
   "profile": "SaaS App",
   "started": "2026-02-12T10:00:00Z",
   "skills_completed": ["sec-ship", "deps"],
@@ -766,10 +766,7 @@ Review deferred items      ← Read the Deferred Items table in the report
 - **Be actionable** — Every finding maps to a skill or manual action
 - **Keep orchestrator lean** — Short progress messages, no data dumps
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

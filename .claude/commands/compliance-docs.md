@@ -216,7 +216,7 @@ Before generating any documents, scan the codebase to build an inventory of actu
 ```
 Detect from CLAUDE.md, package.json, and codebase:
 - Project name
-- Company name (detected from CLAUDE.md or package.json)
+- Company name (Steel Motion LLC for Rowan/Clarus/Kaulby)
 - Description / purpose
 - Tech stack
 - Hosting provider(s)
@@ -323,7 +323,7 @@ Display a brief summary of what was found:
 CODEBASE SECURITY SCAN COMPLETE
 ═══════════════════════════════════════════════════════════════
 
-Project: [Project Name] ([Company Name])
+Project: Rowan (Steel Motion LLC)
 Stack: Next.js 15 + Supabase + Vercel
 Third-party services detected: 7
 Auth: Supabase Auth (email + OAuth)
@@ -1027,10 +1027,7 @@ echo "Compliance documents removed"
 - **Complements /compliance** — this skill generates documents, /compliance audits code for violations
 - **Complements /sec-ship** — this skill documents security posture, /sec-ship finds and fixes vulnerabilities
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

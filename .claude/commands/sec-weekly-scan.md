@@ -1,6 +1,6 @@
 # /sec-weekly-scan — Weekly Security Audit Across All Repos
 
-**Scope:** Global (all configured repos)
+**Scope:** Global (rowan, kaulby, clarus, styrby, steelmotion)
 **Model:** Sonnet 4.5 (strategic analysis + auto-fix)
 **Schedule:** Saturday 12:30 AM CST (automated via GitHub Actions)
 **Runtime:** 1-2 hours (parallel processing)
@@ -9,7 +9,7 @@
 
 ## Purpose
 
-Comprehensive weekly security audit across all configured repos:
+Comprehensive weekly security audit across all SaaS products and company website:
 - Automated vulnerability scanning (GitHub Actions runs Saturday 12:30 AM CST)
 - Strategic auto-fixing with code impact analysis
 - Parallel processing for efficiency
@@ -27,12 +27,12 @@ Key phases for this skill:
 
 ```
 🚀 Phase 1: PARALLEL DISCOVERY (2-3 min)
-   ├─ Spawning agents for parallel scanning
-   ├─ Repo 1: Scanning dependencies, code, licenses, types...
-   ├─ Repo 2: Scanning dependencies, code, licenses, types...
-   ├─ Repo 3: Scanning dependencies, code, licenses, types...
-   └─ Repo N: Scanning dependencies, code, licenses, types...
-   ✅ Discovery complete - X issues found across N repos
+   ├─ Spawning 4 agents for parallel scanning
+   ├─ Rowan: Scanning dependencies, code, licenses, types...
+   ├─ Kaulby: Scanning dependencies, code, licenses, types...
+   ├─ Clarus: Scanning dependencies, code, licenses, types...
+   └─ Styrby: Scanning dependencies, code, licenses, types...
+   ✅ Discovery complete - X issues found across 4 repos
 
 📊 Phase 2: STRATEGIC ANALYSIS (2-3 min)
    ├─ Analyzing 23 findings for auto-fix feasibility
@@ -41,16 +41,16 @@ Key phases for this skill:
    └─ ✅ 18 auto-fixable, 5 need manual review
 
 🔧 Phase 3: PARALLEL AUTO-FIX (20-30 min)
-   ├─ Agent 1 (Repo 1): Fixing 6 issues...
+   ├─ Agent 1 (Rowan): Fixing 6 issues...
    │  ├─ Fixed dependency CVE (lodash)
    │  ├─ Updated packages (validated build)
    │  └─ ✅ 5/6 fixed (1 needs review)
-   ├─ Agent 2 (Repo 2): Fixing 3 issues...
-   └─ [Similar for remaining repos]
+   ├─ Agent 2 (Kaulby): Fixing 3 issues...
+   └─ [Similar for Clarus, Styrby]
 
 📝 Phase 4: PR VALIDATION & MERGE (5 min per repo)
-   ├─ Repo 1: PR created → CI running → ✅ Merged
-   ├─ Repo 2: PR created → CI running → ✅ Merged
+   ├─ Rowan: PR created → CI running → ✅ Merged
+   ├─ Kaulby: PR created → CI running → ✅ Merged
    └─ [Results for each repo]
 
 📄 Phase 5: MASTER AUDIT REPORT
@@ -68,7 +68,7 @@ Key rules for this skill:
 - State file tracks which repos are scanned, which have PRs created
 - Resume from checkpoint if context resets — skip already-scanned repos
 - Max 2 parallel repo scans (to limit context accumulation)
-- Orchestrator messages stay lean: "Repo 2/4 my-analytics-tool: 3 findings (1 critical), PR created"
+- Orchestrator messages stay lean: "Repo 2/4 Kaulby: 3 findings (1 critical), PR created"
 
 ---
 
@@ -82,19 +82,20 @@ Key rules for this skill:
 /sec-weekly-scan --fix-only
 
 # Single repo testing
-/sec-weekly-scan --repo my-saas-app
-/sec-weekly-scan --repo my-analytics-tool
-/sec-weekly-scan --repo my-other-app
-/sec-weekly-scan --repo my-website
+/sec-weekly-scan --repo rowan
+/sec-weekly-scan --repo kaulby
+/sec-weekly-scan --repo clarus
+/sec-weekly-scan --repo styrby
+/sec-weekly-scan --repo steelmotion
 
-# Include less-frequent repos (e.g., first Saturday of month)
-/sec-weekly-scan --include-website
+# Include Steel Motion (first Saturday of month)
+/sec-weekly-scan --include-steelmotion
 
 # Dry run (report only, no fixes)
 /sec-weekly-scan --dry-run
 
 # Skip specific repos
-/sec-weekly-scan --skip my-saas-app,my-analytics-tool
+/sec-weekly-scan --skip rowan,kaulby
 ```
 
 ---
@@ -119,29 +120,34 @@ Key rules for this skill:
 ## Project Registry
 
 ```typescript
-// CUSTOMIZE: Add your own repos here
 const PROJECTS = {
-  'my-saas-app': {
-    path: '~/projects/my-saas-app',
-    repo: 'your-org/my-saas-app',
+  rowan: {
+    path: '/Users/airborneshellback/vibecode-projects/rowan-app',
+    repo: 'VetSecItPro/rowan-app',
     schedule: 'weekly',
     priority: 'high'
   },
-  'my-analytics-tool': {
-    path: '~/projects/my-analytics-tool',
-    repo: 'your-org/my-analytics-tool',
+  kaulby: {
+    path: '/Users/airborneshellback/vibecode-projects/kaulby-app',
+    repo: 'VetSecItPro/kaulby-app',
     schedule: 'weekly',
     priority: 'high'
   },
-  'my-other-app': {
-    path: '~/projects/my-other-app',
-    repo: 'your-org/my-other-app',
+  clarus: {
+    path: '/Users/airborneshellback/vibecode-projects/clarus-app',
+    repo: 'VetSecItPro/clarus-app',
     schedule: 'weekly',
     priority: 'high'
   },
-  'my-website': {
-    path: '~/projects/my-website',
-    repo: 'your-org/my-website',
+  styrby: {
+    path: '/Users/airborneshellback/vibecode-projects/styrby-app',
+    repo: 'VetSecItPro/styrby-app',
+    schedule: 'weekly',
+    priority: 'high'
+  },
+  steelmotion: {
+    path: '/Users/airborneshellback/vibecode-projects/steelmotion',
+    repo: 'VetSecItPro/steelmotion',
     schedule: 'monthly', // First Saturday only
     priority: 'medium'
   }
@@ -387,11 +393,11 @@ async function createAndMergePR(repo: string, findings: Finding[]) {
 
 | Repo | Issues Found | Auto-Fixed | Merged | Status |
 |------|--------------|------------|--------|--------|
-| Repo 1 | X | Y | ✅/⚠️ | ... |
-| Repo 2 | X | Y | ✅/⚠️ | ... |
-| Repo 3 | X | Y | ✅/⚠️ | ... |
-| Repo N | X | Y | ✅/⚠️ | ... |
-| **Total** | **X** | **Y** | **Z/N** | **W pending** |
+| Rowan | X | Y | ✅/⚠️ | ... |
+| Kaulby | X | Y | ✅/⚠️ | ... |
+| Clarus | X | Y | ✅/⚠️ | ... |
+| Styrby | X | Y | ✅/⚠️ | ... |
+| **Total** | **X** | **Y** | **Z/4** | **W pending** |
 
 ---
 
@@ -601,12 +607,12 @@ The skill can read findings from the automated GitHub Actions scan:
 
 ## Schedule Configuration
 
-### Weekly (High-Priority Repos)
-- **Time:** Saturday 12:30 AM CST (customize for your timezone)
+### Weekly (Rowan, Kaulby, Clarus, Styrby)
+- **Time:** Saturday 12:30 AM CST
 - **Frequency:** Every Saturday
 - **Cron:** `30 6 * * 6` (UTC)
 
-### Monthly (Lower-Priority Repos, e.g., marketing site)
+### Monthly (Steel Motion)
 - **Time:** First Saturday 12:30 AM CST
 - **Frequency:** Monthly
 - **Cron:** `30 6 1-7 * 6` (First Saturday of month)
@@ -638,10 +644,7 @@ When this skill is invoked, execute the following workflow:
 
 **CRITICAL:** Follow status update protocol throughout execution. Never go silent during long-running operations.
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

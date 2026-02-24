@@ -596,10 +596,7 @@ No flags. No config. Auto-detects everything from package.json.
 7. **Actionable output** — every finding has a status and next step
 8. **Complements the pipeline** — /smoketest (quick) → /test-ship (thorough) → /sec-ship (security) → /gh-ship (deploy)
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

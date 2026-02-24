@@ -1004,10 +1004,7 @@ AUTONOMOUS EXECUTION PHASE (After COA approval)
 - **Respect token budget** - Scale depth to complexity, don't over-engineer TACTICAL missions
 - **Handle blockers yourself when possible** - Only escalate critical blockers that require user input
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

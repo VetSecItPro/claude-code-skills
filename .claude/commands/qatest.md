@@ -1528,10 +1528,7 @@ This is a GLOBAL skill — every project it runs in should have `.qatest-reports
 - **Clean up after yourself.** Close browsers, document test data, don't leave the codebase in a worse state than you found it.
 - **Ship decision is binary.** Either the app is ready to ship or it's not. Be clear and decisive.
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->

@@ -736,7 +736,7 @@ All notable changes to this project are documented here.
 - feat(api): Add bulk import endpoint (#125)
 
 ### Changed
-- refactor(db): Move to dedicated schema (#120)
+- refactor(db): Move to Clarus schema (#120)
 
 ### Fixed
 - fix(ui): Button alignment on mobile (#124)
@@ -843,18 +843,18 @@ We use OpenRouter because:
 **Detect decisions from code patterns:**
 
 ```markdown
-# ADR-001: Use Dedicated Schema Instead of Public
+# ADR-001: Use Clarus Schema Instead of Public
 
 ## Status
 Accepted
 
 ## Context
-This Supabase project is shared with other applications.
-We needed to isolate this app's tables to prevent accidental cross-contamination.
+This Supabase project is shared with other applications (Rowan, Steel Motion).
+We needed to isolate Clarus tables to prevent accidental cross-contamination.
 
 ## Decision
-All app tables live in a dedicated schema (e.g., `my_app`), not `public`.
-The database `search_path` is configured to use the dedicated schema by default.
+All Clarus tables live in the `clarus` schema, not `public`.
+The database `search_path` is configured to use `clarus` by default.
 
 ## Consequences
 
@@ -868,8 +868,8 @@ The database `search_path` is configured to use the dedicated schema by default.
 - Supabase Studio shows all schemas (visual clutter)
 
 ## Code Reference
-- `CLAUDE.md`: Schema isolation rules
-- `scripts/create-app-schema.sql`: Schema setup
+- `CLAUDE.md` line 45-80: Schema isolation rules
+- `scripts/100-create-clarus-schema.sql`: Schema setup
 ```
 
 ---
@@ -1088,10 +1088,7 @@ echo "✅ Documentation reverted"
 - Run monthly to keep docs fresh
 - Run before onboarding new team members
 
----
-
-<!-- 
-  Claude Code Skill by Steel Motion LLC
-  https://steelmotionllc.com/portfolio/software/claude-code-skills
-  Licensed under MIT - see LICENSE
--->
+<!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
+<!-- Part of the Claude Code Skills Collection -->
+<!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->
+<!-- License: MIT -->
