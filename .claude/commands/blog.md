@@ -420,6 +420,19 @@ If the user provides multiple articles at once:
 
 ---
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Blog-Specific Cleanup
+
+No cleanup required. All outputs are intentional:
+- MDX blog post file (committed)
+- Images in `public/images/blog/` (committed)
+- Git operations delegated to `/gh-ship` (which handles its own cleanup)
+
+---
+
 ## REMEMBER
 
 - **Be conversational** — this is creative work, not a deployment pipeline

@@ -1517,6 +1517,33 @@ This is a GLOBAL skill — every project it runs in should have `.qatest-reports
 
 ---
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### QATest-Specific Cleanup
+
+Resources this skill may create:
+- Playwright browser instances (screenshots, page navigation)
+- Dev server (if started by skill)
+- Test form submissions with `qatest_` prefix in databases
+- Screenshots in `.qatest-reports/screenshots/`
+
+Cleanup actions (run after Phase 9 Validation, before Phase 10 Report):
+1. **Close all browser instances:** Call `browser_close` for every open Playwright session
+2. **Stop dev server (if started by this skill):** Kill the PID tracked at Phase 0. Verify port is released. If the user started the server before the skill, leave it running
+3. **Delete test data:** Query for records with `qatest_` prefix and DELETE them. Log any records that couldn't be deleted
+4. **Screenshots:** Keep screenshots in `.qatest-reports/screenshots/` (intended output). Delete any screenshots in `/tmp/` or working directory
+5. **Verify no orphaned Chromium/Playwright processes remain**
+6. **Log cleanup results in the report**
+
+Cleanup verification:
+- `pgrep -f "chromium|playwright"` should match pre-skill baseline
+- `lsof -ti:3000` should be empty (if skill started the server)
+- Database query for `qatest_*` records should return 0
+
+---
+
 ## REMEMBER
 
 - **You are the QA lead, not the developer.** Your job is to find and document issues, fix the easy ones, and give a clear go/no-go decision.

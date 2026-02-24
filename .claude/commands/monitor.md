@@ -872,6 +872,20 @@ When run after a previous baseline exists:
 
 ---
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Monitor-Specific Cleanup
+
+No resource cleanup required — this skill is fully read-only (HTTP checks only).
+
+Cleanup actions:
+1. **Gitignore enforcement:** Already handled in Stage 0
+2. **Stale report pruning:** Consider deleting `.monitor-reports/state-*.json` files older than 7 days on next run
+
+---
+
 ## REMEMBER
 
 1. You are a health checker, not a fixer. Report issues, don't fix them. Recommend the right skill for fixing.

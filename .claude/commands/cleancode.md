@@ -1394,6 +1394,18 @@ echo "Rolled back to: $CLEAN_BASE"
 - **Bundle conscious** — Every import has a cost, every 'use client' has a cost
 - **Type strict** — Every `any` is a bug waiting to happen
 
+---
+
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Cleancode-Specific Cleanup
+
+Cleanup actions:
+1. **Git stash:** On successful completion, drop the backup stash: `git stash drop` for the `cleancode-backup-*` entry. Only keep the stash if the skill failed and rollback may be needed
+2. **Gitignore enforcement:** Ensure `.cleancode-reports/` is in `.gitignore`
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

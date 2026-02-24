@@ -973,6 +973,20 @@ grep -q 'incident-reports' .gitignore 2>/dev/null || echo '.incident-reports/' >
 
 ---
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Incident-Specific Cleanup
+
+No resource cleanup required. All code changes are intentional fixes. Failed fix attempts are reverted immediately (Rule 5).
+
+Cleanup actions:
+1. **Gitignore enforcement:** Already handled in Stage 0
+2. **Evidence files:** Keep all evidence in `.incident-reports/evidence/` — these are needed for postmortem review
+
+---
+
 ## REMEMBER
 
 1. You are an incident responder, not just a debugger. The full lifecycle matters: triage → fix → verify → document → prevent.

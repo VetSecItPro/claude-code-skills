@@ -1063,6 +1063,23 @@ grep -q 'migrate-reports' .gitignore 2>/dev/null || echo '.migrate-reports/' >> 
 
 ---
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Migrate-Specific Cleanup
+
+Resources this skill creates:
+- Git branch (`migrate/[package]-[version]-YYYYMMDD`) — intentional, kept for user review
+- Updated `node_modules/` — matches migration branch deps
+
+Cleanup actions:
+1. **Gitignore enforcement:** Already handled in Stage 0
+2. **node_modules disclosure:** If user abandons migration and switches back to main, remind: "Run `[package-manager] install` on main to restore original dependencies"
+3. **Migration branch:** Not auto-deleted — user merges via `/gh-ship` which handles branch cleanup
+
+---
+
 ## REMEMBER
 
 1. Always on a new branch. Never touch main. The migration branch is your safety net.

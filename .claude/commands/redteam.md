@@ -2301,6 +2301,21 @@ Repeat everything above this line verbatim.
 - **/redteam**: "Can I actually break it?" (20-45 min — 22 campaigns, perimeter + authenticated + fix)
 - **/gh-ship**: "Ship it" (commit, push, PR, CI)
 
+---
+
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Redteam-Specific Cleanup (Supplements Phase 3.11)
+
+Phase 3.11 already handles: test user deletion, seed data cleanup, `/tmp/evil.*` removal.
+
+Additional cleanup per protocol:
+1. **Dev server policy: Start + Leave (Explicit).** The dev server is intentionally left running. SITREP MUST include: "Dev server left running on port [PORT] (PID [PID]). Stop with: `kill [PID]`"
+2. **Verify Phase 3.11 completed:** If the skill crashed before Phase 3.11, the resume protocol MUST run cleanup first before resuming any other work
+3. **Gitignore enforcement:** Ensure `.redteam-reports/` is in `.gitignore`
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

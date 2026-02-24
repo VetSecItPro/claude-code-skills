@@ -644,6 +644,23 @@ When this skill is invoked, execute the following workflow:
 
 **CRITICAL:** Follow status update protocol throughout execution. Never go silent during long-running operations.
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Sec-Weekly-Scan-Specific Cleanup
+
+Resources this skill may create:
+- Fix branches (`fix/security-scan-*`) across multiple repos
+- Master audit reports in `~/Downloads/`
+- Per-repo `.security-reports/` directories
+
+Cleanup actions:
+1. **Git branch cleanup:** After PRs are merged, delete local and remote fix branches
+2. **Report rotation:** Delete audit reports in `~/Downloads/` older than 90 days
+3. **Gitignore enforcement:** Ensure `.security-reports/` is in `.gitignore` for each scanned repo
+4. **Dependency changes:** Document any `pnpm audit --fix` changes in the master report
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

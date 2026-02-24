@@ -596,6 +596,17 @@ No flags. No config. Auto-detects everything from package.json.
 7. **Actionable output** — every finding has a status and next step
 8. **Complements the pipeline** — /smoketest (quick) → /test-ship (thorough) → /sec-ship (security) → /gh-ship (deploy)
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Smoketest-Specific Cleanup
+
+Cleanup actions:
+1. **Dependency disclosure:** If `npm audit fix` modified dependencies, document changes in the report
+2. **Gitignore enforcement:** Ensure `.smoketest-reports/` is in `.gitignore`
+3. **No browser, server, or test data cleanup needed**
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

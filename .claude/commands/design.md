@@ -1501,6 +1501,30 @@ function ResponsiveDataDisplay({ data, columns }) {
 - **/redteam**: "Can I break it?" (20-45 min)
 - **/gh-ship**: "Ship it" (commit, push, PR, CI)
 
+---
+
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Design-Specific Cleanup
+
+Resources this skill may create:
+- Playwright browser instances (extensive screenshot sessions across viewports)
+- Screenshots saved to `.design-reports/screenshots/`
+
+Cleanup actions (run after final analysis, before report generation):
+1. **Close all browser instances:** Call `browser_close` for every open Playwright session. This is the #1 cleanup priority — design audits open many pages across 3+ viewports
+2. **Screenshots:** Keep screenshots in `.design-reports/screenshots/` (intended output for the report). Delete any screenshots in default Playwright output locations
+3. **Verify no orphaned Chromium processes remain**
+4. **Verify port used for dev server (if any) is released**
+5. **Gitignore enforcement:** Ensure `.design-reports/` is in `.gitignore`
+6. **Log cleanup results in the report**
+
+Cleanup verification:
+- `pgrep -f "chromium|playwright"` should match pre-skill baseline
+- `browser_close` called explicitly (do NOT rely on process timeout)
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

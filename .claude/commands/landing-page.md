@@ -907,6 +907,23 @@ Report: .landing-reports/[filename].md
 /landing-page research hero-design
 ```
 
+---
+
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Landing-Page-Specific Cleanup
+
+Resources this skill may create:
+- Playwright browser instances (in audit/optimize modes)
+- Installed dependencies (in generate mode)
+
+Cleanup actions:
+1. **Close browser instances:** If Playwright was used for audit/optimize, call `browser_close`
+2. **Dependency disclosure:** If generate mode installed component libraries (Aceternity UI, Magic UI), document in SITREP as intentional additions
+3. **Gitignore enforcement:** Ensure `.landing-reports/` is in `.gitignore`
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

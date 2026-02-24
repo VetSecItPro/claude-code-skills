@@ -1056,6 +1056,18 @@ echo "✅ Rolled back to: $PERF_BASE"
 - **Auto-fix safe patterns only** - Promise.all, constant extraction, useMemo additions are safe; architecture changes get flagged
 - **Think like a senior reviewer** - Flag what a 20-year eng manager would catch in code review: hidden O(n²), scalability red flags, DX pain points
 
+---
+
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Perf-Specific Cleanup
+
+Cleanup actions:
+1. **Gitignore enforcement:** Ensure `.perf/` is in `.gitignore`
+2. **No browser, server, or test data cleanup needed** — this skill performs static analysis and build measurements only
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

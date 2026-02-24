@@ -1906,6 +1906,24 @@ echo "All changes from this /test-ship run have been reverted."
 - **All outputs gitignored** — reports don't pollute your repo
 - Run `/test-ship --changed` for quick pre-commit validation
 
+---
+
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Test-Ship-Specific Cleanup (Supplements Phase 5)
+
+Phase 5 already handles: dev server stop, E2E test user teardown, orphaned process killing, port cleanup.
+
+Additional cleanup per protocol:
+1. **Root-level JSON files:** Delete `.test-ship-state.json`, `.test-ship-history.json`, `.test-ship-quarantine.json`, `.test-audit.json` after data is captured in `.test-reports/`
+2. **Dependency disclosure:** Log all installed devDependencies (vitest, playwright, testing-library) in the SITREP as permanent additions. These are intentional but must be disclosed
+3. **Playwright browser binaries:** Note in report that `npx playwright install` downloaded browser binaries to `~/.cache/ms-playwright/`. These persist across runs (intentional)
+4. **Config files created:** Note any new files (`vitest.config.ts`, `vitest.setup.ts`, `playwright.config.ts`) in the SITREP as permanent additions
+5. **Screenshots:** Keep E2E failure screenshots in `.test-reports/screenshots/`. Delete any in `/tmp/` or working directory
+6. **Gitignore enforcement:** Ensure `.test-reports/` is in `.gitignore`
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

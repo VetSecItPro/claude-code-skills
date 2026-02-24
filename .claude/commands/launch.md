@@ -751,6 +751,31 @@ Review deferred items      ← Read the Deferred Items table in the report
 
 ---
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Launch-Specific Cleanup (Orchestrator Responsibility)
+
+`/launch` spawns up to 8 sub-agents, each capable of creating their own resources. The orchestrator MUST verify cleanup after each sub-agent and run a final sweep.
+
+Sub-agent cleanup instructions:
+- Every sub-agent prompt MUST include: "After completing your work, clean up all resources: close browsers, stop dev servers, delete test data, remove temp files. Report cleanup status in your return summary."
+
+Post-sub-agent verification (after ALL sub-agents complete):
+1. **Browser sweep:** `pgrep -f "chromium|playwright"` — kill any new processes not in the baseline
+2. **Dev server sweep:** `lsof -ti:3000,3001,4000` — kill any new port holders not in the baseline
+3. **Test data sweep:** Check databases for test-prefixed records (`qatest_`, `test_`, etc.)
+4. **Process sweep:** Compare current process list against Stage 0 baseline
+5. **Temp file sweep:** Check `/tmp/` for skill-related files
+6. **Stale scorecard cleanup:** Delete `.launch-reports/scorecard-*.json` files older than 30 days
+7. **Gitignore enforcement:** Ensure `.launch-reports/` is in `.gitignore`
+8. **Log the full cleanup results in the report**
+
+This is the HIGHEST-PRIORITY cleanup in the skill collection because sub-agent resource leaks are invisible to the user.
+
+---
+
 ## REMEMBER
 
 - **Context management is NOT optional** — Sub-agents return < 500 tokens. Scorecard lives on disk. Resume from checkpoint.

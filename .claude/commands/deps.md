@@ -734,6 +734,17 @@ Only ask for human input when:
 - Run weekly to stay ahead of vulnerabilities
 - Run before deployments for peace of mind
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Deps-Specific Cleanup
+
+Cleanup actions:
+1. **Orphan file:** Delete `.deps-audit.json` from project root after data is captured in `.deps-reports/`
+2. **Gitignore enforcement:** Ensure `.deps-reports/` is in `.gitignore`
+3. **Pre-deps snapshot commit:** The `chore: pre-deps snapshot` commit persists in git history (this is intentional for rollback safety)
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

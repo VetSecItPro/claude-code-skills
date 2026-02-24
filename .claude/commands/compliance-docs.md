@@ -1027,6 +1027,16 @@ echo "Compliance documents removed"
 - **Complements /compliance** — this skill generates documents, /compliance audits code for violations
 - **Complements /sec-ship** — this skill documents security posture, /sec-ship finds and fixes vulnerabilities
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Compliance-Docs-Specific Cleanup
+
+Cleanup actions:
+1. **Gitignore enforcement:** Ensure `.compliance-docs-reports/` is in `.gitignore` — generated documents are confidential
+2. **No other resources created** — this skill generates documentation files only
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

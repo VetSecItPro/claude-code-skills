@@ -1360,6 +1360,16 @@ For each fixable finding:
 
 Always consult with a qualified attorney for legal compliance matters.
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Compliance-Specific Cleanup
+
+Cleanup actions:
+1. **Gitignore enforcement:** Ensure `.compliance/` is in `.gitignore` — compliance reports may contain sensitive findings
+2. **No other resources created** — this skill is read-only static analysis
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

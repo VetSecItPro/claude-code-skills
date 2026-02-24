@@ -1088,6 +1088,17 @@ echo "✅ Documentation reverted"
 - Run monthly to keep docs fresh
 - Run before onboarding new team members
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Docs-Specific Cleanup
+
+Cleanup actions:
+1. **Temp file:** Delete `/tmp/example.ts` if created during validation
+2. **Orphan file:** Delete `.docs-audit.json` from project root after data is captured in `.docs-reports/`
+3. **Gitignore enforcement:** Ensure `.docs-reports/` is in `.gitignore`
+
 <!-- Claude Code Skill by Steel Motion LLC — https://steelmotion.dev -->
 <!-- Part of the Claude Code Skills Collection -->
 <!-- Powered by Claude models: Haiku (fast extraction), Sonnet (balanced reasoning), Opus (deep analysis) -->

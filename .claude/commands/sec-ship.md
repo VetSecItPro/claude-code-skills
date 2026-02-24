@@ -1137,6 +1137,19 @@ Append to `.security-reports/history.json`:
 
 ---
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### Sec-Ship-Specific Cleanup
+
+Cleanup actions:
+1. **Gitignore enforcement:** Ensure `.security-reports/` is in `.gitignore`
+2. **Dependency disclosure:** If security fixes required installing packages (e.g., DOMPurify, helmet), document in SITREP as intentional additions
+3. **No browser, server, or test data cleanup needed** — this skill modifies code only
+
+---
+
 ## REMEMBER
 
 - **Fix EVERYTHING** — Definition of done is ZERO vulnerabilities

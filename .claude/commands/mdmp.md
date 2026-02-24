@@ -993,6 +993,19 @@ AUTONOMOUS EXECUTION PHASE (After COA approval)
 
 ---
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### MDMP-Specific Cleanup
+
+Cleanup actions:
+1. **Stale state files:** Delete `.mdmp/state-*.json` files older than 7 days
+2. **Gitignore enforcement:** Ensure `.mdmp/` is in `.gitignore`
+3. **Execution phase resources:** If Phase 7 (execution) created resources (servers, test data, deps), those are managed by whatever skill or process was invoked, not by MDMP itself
+
+---
+
 ## REMEMBER
 
 - **Work autonomously through analysis** - Do NOT pause at Phases 1-2, proceed automatically

@@ -1091,6 +1091,17 @@ retry_with_backoff() {
 
 ---
 
+## CLEANUP PROTOCOL
+
+> Reference: [Resource Cleanup Protocol](~/.claude/standards/CLEANUP_PROTOCOL.md)
+
+### GH-Ship-Specific Cleanup
+
+This skill already has comprehensive cleanup in Stage 12. No additional cleanup required.
+Stage 12 covers: branch deletion, PR verification, stash restoration, stale branch pruning, and clean state verification.
+
+---
+
 ## IMPORTANT REMINDERS
 
 - This skill runs FULLY AUTONOMOUSLY
