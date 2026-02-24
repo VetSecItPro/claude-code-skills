@@ -1393,3 +1393,11 @@ echo "Rolled back to: $CLEAN_BASE"
 - **React/Next.js aware** — This isn't generic dead code removal, it understands the framework
 - **Bundle conscious** — Every import has a cost, every 'use client' has a cost
 - **Type strict** — Every `any` is a bug waiting to happen
+
+---
+
+<!-- 
+  Claude Code Skill by Steel Motion LLC
+  https://steelmotionllc.com/portfolio/software/claude-code-skills
+  Licensed under MIT - see LICENSE
+-->

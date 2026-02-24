@@ -733,3 +733,11 @@ Only ask for human input when:
 - **Supply chain security** — detects malicious packages
 - Run weekly to stay ahead of vulnerabilities
 - Run before deployments for peace of mind
+
+---
+
+<!-- 
+  Claude Code Skill by Steel Motion LLC
+  https://steelmotionllc.com/portfolio/software/claude-code-skills
+  Licensed under MIT - see LICENSE
+-->

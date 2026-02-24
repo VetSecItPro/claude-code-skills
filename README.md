@@ -1,95 +1,136 @@
 # Claude Code Skills Library
 
-**33 production-tested Claude Code skills** built from shipping real products at [Steel Motion LLC](https://steelmotionllc.com).
+**21 production-tested Claude Code skills** built from shipping real products at [Steel Motion LLC](https://steelmotionllc.com). All free, all open source.
 
-This repo contains the **free tier** — 10 skills + 3 shared standards protocols. The premium tier (12 additional skills for CI/CD, security, compliance, and planning) is available at [steelmotionllc.com/portfolio/software/claude-code-skills](https://steelmotionllc.com/portfolio/software/claude-code-skills).
+A complete SDLC automation framework: plan, build, design, test, secure, and ship. Each skill is a structured prompt with execution phases, tool permissions, and built-in standards.
 
 ---
 
 ## Quick Install
 
 ```bash
-# Clone and copy to your Claude Code config
+bash <(curl -s https://raw.githubusercontent.com/VetSecItPro/claude-code-skills/main/install.sh)
+```
+
+Or manually:
+
+```bash
 git clone https://github.com/VetSecItPro/claude-code-skills.git
 cp -r claude-code-skills/.claude/commands/* ~/.claude/commands/
 cp -r claude-code-skills/.claude/standards/* ~/.claude/standards/
-
-# Or one-liner:
-bash <(curl -s https://raw.githubusercontent.com/VetSecItPro/claude-code-skills/main/install.sh)
 ```
 
 After install, restart Claude Code. Skills appear as `/skill-name` commands.
 
+> The installer is additive. If you already have skills in `~/.claude/commands/`, it merges without removing your existing ones.
+
 ---
 
-## Free Tier Skills (10)
+## Pipeline Cheat Sheet
 
-| Skill | Category | Description |
-|-------|----------|-------------|
-| `/dev` | Development | Self-healing development server with auto port recovery |
-| `/deps` | Development | Dependency health audit and supply chain security |
-| `/docs` | Development | WHY-focused documentation generator |
-| `/blog` | Development | Interactive content pipeline — draft to deploy |
-| `/n8n-workflow` | Development | Build n8n automation workflows interactively |
-| `/smoketest` | Quality | Quick build verification — lint, typecheck, build |
-| `/cleancode` | Quality | Dead code removal and technical debt reduction |
-| `/perf` | Quality | Lighthouse-powered performance audit |
-| `/a11y` | Quality | WCAG accessibility audit with automated fixes |
-| `/design` | Design | UI/UX audit across all viewports with trend research |
+Skills are ordered by SDLC phase. Use them in sequence or pick what you need.
 
-## Shared Standards (3)
+### Plan
 
-Every skill follows these protocols for consistent behavior:
+| Skill | When to Use |
+|-------|-------------|
+| `/mdmp` | Planning complex decisions with structured analysis |
+
+### Build
+
+| Skill | When to Use |
+|-------|-------------|
+| `/dev` | Starting a dev server with auto-healing and port management |
+| `/db` | Managing schemas, migrations, and seed data |
+| `/deps` | Auditing packages for outdated or vulnerable dependencies |
+| `/docs` | Generating decision-focused documentation |
+| `/blog` | Publishing blog posts with SEO and auto-deploy |
+
+### Design
+
+| Skill | When to Use |
+|-------|-------------|
+| `/design` | Running a full UI/UX audit across all viewports |
+| `/landing-page` | Building or optimizing landing pages for conversion |
+
+### Quality
+
+| Skill | When to Use |
+|-------|-------------|
+| `/smoketest` | Quick verification that the build is healthy |
+| `/cleancode` | Cleaning up dead code and unused exports |
+| `/perf` | Profiling performance and Core Web Vitals |
+| `/a11y` | Auditing and fixing WCAG accessibility issues |
+| `/qatest` | Pre-ship quality gate across all pages and APIs |
+| `/test-ship` | Auditing test coverage and writing missing tests |
+
+### Security
+
+| Skill | When to Use |
+|-------|-------------|
+| `/sec-ship` | Running a full OWASP-aligned security audit |
+| `/sec-weekly-scan` | Scheduled weekly security sweeps across repos |
+| `/redteam` | Simulating attacks against your local environment |
+| `/compliance` | Auditing GDPR/CCPA compliance and data flows |
+| `/compliance-docs` | Generating compliance policies and control docs |
+
+### Ship
+
+| Skill | When to Use |
+|-------|-------------|
+| `/launch` | Running pre-launch checks before going live |
+| `/gh-ship` | Shipping code from commit to merged PR in one command |
+
+---
+
+## 3 Shared Standards
+
+Every skill follows the same protocols for consistent behavior:
 
 | Protocol | Purpose |
 |----------|---------|
-| `STATUS_UPDATES.md` | Standardized progress reporting — phase tracking, completion %, structured output |
-| `CONTEXT_MANAGEMENT.md` | How skills read and preserve context — memory, file discovery, state |
-| `AGENT_ORCHESTRATION.md` | Multi-agent coordination — delegation, parallel execution, result aggregation |
+| `STATUS_UPDATES.md` | Standardized progress reporting: phase tracking, completion %, structured output |
+| `CONTEXT_MANAGEMENT.md` | How skills read and preserve context: memory, file discovery, state |
+| `AGENT_ORCHESTRATION.md` | Multi-agent coordination: delegation, parallel execution, result aggregation |
 
 ---
 
-## Premium Tier (12 Skills)
+## How It Works
 
-Advanced skills for CI/CD, security, compliance, and strategic planning. **Free with email** at [steelmotionllc.com](https://steelmotionllc.com/portfolio/software/claude-code-skills).
+Claude Code skills are Markdown files that define structured prompts, execution phases, and tool permissions. When placed in `~/.claude/commands/`, they become available as `/command-name` in any Claude Code session.
 
-| Skill | Category | Description |
-|-------|----------|-------------|
-| `/gh-ship` | Development | Full git pipeline — commit → PR → CI → merge → deploy |
-| `/db` | Development | Database schema, migrations, and data management |
-| `/qatest` | Quality | Autonomous QA/UAT — 13-phase testing with autofix |
-| `/test-ship` | Quality | Test audit — find gaps, write tests, verify coverage |
-| `/sec-ship` | Security | Full security pipeline — audit → fix → validate → report |
-| `/sec-weekly-scan` | Security | Cross-repo weekly security audit |
-| `/redteam` | Security | Active exploitation testing against localhost |
-| `/compliance` | Security | GDPR/CCPA privacy compliance audit |
-| `/compliance-docs` | Security | Enterprise compliance documentation generator |
-| `/landing-page` | Design | Conversion-optimized landing page builder |
-| `/launch` | Planning | Pre-launch validation pipeline |
-| `/mdmp` | Planning | Military Decision-Making Process for software |
+The standards protocols in `~/.claude/standards/` are automatically loaded into every session, ensuring consistent behavior across all skills.
 
----
-
-## Repo Structure
+### Repo Structure
 
 ```
 claude-code-skills/
 ├── README.md
 ├── LICENSE                    # MIT
-├── install.sh                 # One-liner installer
-├── PREMIUM.md                 # Premium tier info + link
+├── install.sh                 # One-command installer
 └── .claude/
-    ├── commands/              # 10 free-tier skills
-    │   ├── dev.md
-    │   ├── smoketest.md
-    │   ├── cleancode.md
+    ├── commands/              # 21 skills
+    │   ├── mdmp.md            # Plan
+    │   ├── dev.md             # Build
+    │   ├── db.md
     │   ├── deps.md
-    │   ├── a11y.md
-    │   ├── perf.md
     │   ├── docs.md
-    │   ├── design.md
     │   ├── blog.md
-    │   └── n8n-workflow.md
+    │   ├── design.md          # Design
+    │   ├── landing-page.md
+    │   ├── smoketest.md       # Quality
+    │   ├── cleancode.md
+    │   ├── perf.md
+    │   ├── a11y.md
+    │   ├── qatest.md
+    │   ├── test-ship.md
+    │   ├── sec-ship.md        # Security
+    │   ├── sec-weekly-scan.md
+    │   ├── redteam.md
+    │   ├── compliance.md
+    │   ├── compliance-docs.md
+    │   ├── launch.md          # Ship
+    │   └── gh-ship.md
     └── standards/             # 3 shared protocols
         ├── STATUS_UPDATES.md
         ├── CONTEXT_MANAGEMENT.md
@@ -98,18 +139,10 @@ claude-code-skills/
 
 ---
 
-## How It Works
-
-Claude Code skills are Markdown files that define structured prompts, execution phases, and tool permissions. When placed in `~/.claude/commands/`, they become available as `/command-name` in any Claude Code session.
-
-The standards protocols in `~/.claude/standards/` are automatically loaded into every session, ensuring consistent behavior across all skills — same status reporting format, same context management rules, same agent orchestration patterns.
-
----
-
 ## Built By
 
-[Steel Motion LLC](https://steelmotionllc.com) — We build production software and the DevOps frameworks that ship it.
+[Steel Motion LLC](https://steelmotionllc.com) | [All Skills with Details](https://steelmotionllc.com/portfolio/software/claude-code-skills)
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT. See [LICENSE](./LICENSE).

@@ -295,3 +295,11 @@ No emoji, no fixes, just starts. Use when you know everything is fine.
 5. **Escape hatches exist** — `-m` for minimal, `-v` for verbose
 
 The goal: You type `/dev 5888` and forget about it. It either works, or it tells you why it can't.
+
+---
+
+<!-- 
+  Claude Code Skill by Steel Motion LLC
+  https://steelmotionllc.com/portfolio/software/claude-code-skills
+  Licensed under MIT - see LICENSE
+-->

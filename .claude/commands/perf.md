@@ -1055,3 +1055,11 @@ echo "✅ Rolled back to: $PERF_BASE"
 - **Code efficiency is performance** - Algorithmic waste, redundant ops, and async misuse are as impactful as bundle size
 - **Auto-fix safe patterns only** - Promise.all, constant extraction, useMemo additions are safe; architecture changes get flagged
 - **Think like a senior reviewer** - Flag what a 20-year eng manager would catch in code review: hidden O(n²), scalability red flags, DX pain points
+
+---
+
+<!-- 
+  Claude Code Skill by Steel Motion LLC
+  https://steelmotionllc.com/portfolio/software/claude-code-skills
+  Licensed under MIT - see LICENSE
+-->

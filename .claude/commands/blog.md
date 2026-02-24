@@ -31,7 +31,7 @@ Identify which blog you're publishing to based on the current working directory 
 **Known product blogs:**
 | Project | Path Pattern | Content Dir | Image Dir |
 |---------|-------------|-------------|-----------|
-| Steel Motion | `steelmotion` | `content/blog/` | `public/images/blog/` |
+| My Project | `my-project` | `content/blog/` | `public/images/blog/` |
 
 For unknown projects, scan for:
 1. Where existing blog posts live (glob for `*.mdx`, `*.md` in likely dirs)
@@ -166,7 +166,7 @@ You can:
 
 Create the MDX file with proper frontmatter matching the project's schema.
 
-**Velite schema (Steel Motion pattern):**
+**Velite schema (example pattern):**
 ```yaml
 ---
 title: "[title]"
@@ -430,3 +430,11 @@ If the user provides multiple articles at once:
 - **Always SITREP** — the user should know exactly what happened
 
 ARGUMENTS: $ARGUMENTS
+
+---
+
+<!-- 
+  Claude Code Skill by Steel Motion LLC
+  https://steelmotionllc.com/portfolio/software/claude-code-skills
+  Licensed under MIT - see LICENSE
+-->

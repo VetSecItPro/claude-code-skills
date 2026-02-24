@@ -595,3 +595,11 @@ No flags. No config. Auto-detects everything from package.json.
 6. **Persistent reports** — .smoketest-reports/ tracks history
 7. **Actionable output** — every finding has a status and next step
 8. **Complements the pipeline** — /smoketest (quick) → /test-ship (thorough) → /sec-ship (security) → /gh-ship (deploy)
+
+---
+
+<!-- 
+  Claude Code Skill by Steel Motion LLC
+  https://steelmotionllc.com/portfolio/software/claude-code-skills
+  Licensed under MIT - see LICENSE
+-->

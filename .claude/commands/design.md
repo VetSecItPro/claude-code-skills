@@ -1500,3 +1500,11 @@ function ResponsiveDataDisplay({ data, columns }) {
 - **/sec-ship**: "Is it secure?" (15-30 min)
 - **/redteam**: "Can I break it?" (20-45 min)
 - **/gh-ship**: "Ship it" (commit, push, PR, CI)
+
+---
+
+<!-- 
+  Claude Code Skill by Steel Motion LLC
+  https://steelmotionllc.com/portfolio/software/claude-code-skills
+  Licensed under MIT - see LICENSE
+-->
