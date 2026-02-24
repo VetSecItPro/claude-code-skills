@@ -4,6 +4,8 @@
 
 A complete SDLC automation framework: plan, build, design, test, secure, and ship. Each skill is a structured prompt with execution phases, tool permissions, and built-in standards.
 
+> **Disclaimer:** These skills are provided as-is under the MIT License. While they have been tested in production environments, they execute automated actions on your codebase (file edits, git operations, dependency changes, and more). Always review skill behavior in a safe environment before running on production code. Steel Motion LLC assumes no responsibility for unintended changes, data loss, or other issues resulting from the use of these skills. Use at your own discretion.
+
 ---
 
 ## Quick Install
