@@ -87,7 +87,7 @@ Skills are ordered by SDLC phase. Use them in sequence or pick what you need.
 
 ---
 
-## 3 Shared Standards
+## 4 Shared Standards
 
 Every skill follows the same protocols for consistent behavior:
 
@@ -96,6 +96,7 @@ Every skill follows the same protocols for consistent behavior:
 | `STATUS_UPDATES.md` | Standardized progress reporting: phase tracking, completion %, structured output |
 | `CONTEXT_MANAGEMENT.md` | How skills read and preserve context: memory, file discovery, state |
 | `AGENT_ORCHESTRATION.md` | Multi-agent coordination: delegation, parallel execution, result aggregation |
+| `CLEANUP_PROTOCOL.md` | Resource cleanup — browser instances, dev servers, temp files, git stashes cleaned on exit |
 
 ---
 
@@ -135,10 +136,11 @@ claude-code-skills/
     │   ├── compliance-docs.md
     │   ├── launch.md          # Ship
     │   └── gh-ship.md
-    └── standards/             # 3 shared protocols
+    └── standards/             # 4 shared protocols
         ├── STATUS_UPDATES.md
         ├── CONTEXT_MANAGEMENT.md
-        └── AGENT_ORCHESTRATION.md
+        ├── AGENT_ORCHESTRATION.md
+        └── CLEANUP_PROTOCOL.md
 ```
 
 ---
