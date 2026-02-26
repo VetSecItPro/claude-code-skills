@@ -679,17 +679,22 @@ gh run view "$FAILED_RUN" --log-failed 2>/dev/null | tail -100
 Once CI passes:
 
 ```bash
-# Check for required reviews
-REVIEW_STATUS=$(gh pr view "$PR_NUMBER" --json reviewDecision --jq '.reviewDecision')
+# --admin bypasses GitHub branch protection's "required reviewers" gate.
+# This is ideal for solo dev workflows where no one else is reviewing PRs.
+# Important: --admin does NOT skip CI status checks — those still must pass.
+#
+# For team workflows, remove --admin and uncomment the review check below
+# to halt the pipeline when review approval is required:
+#
+#   REVIEW_STATUS=$(gh pr view "$PR_NUMBER" --json reviewDecision --jq '.reviewDecision')
+#   if [ "$REVIEW_STATUS" = "REVIEW_REQUIRED" ]; then
+#     echo "⚠️ PR requires review approval - cannot auto-merge"
+#     echo "PR ready for review: $(gh pr view $PR_NUMBER --json url --jq '.url')"
+#     exit 0
+#   fi
+#   gh pr merge "$PR_NUMBER" --squash --delete-branch
 
-if [ "$REVIEW_STATUS" = "REVIEW_REQUIRED" ]; then
-  echo "⚠️ PR requires review approval - cannot auto-merge"
-  echo "PR ready for review: $(gh pr view $PR_NUMBER --json url --jq '.url')"
-  exit 0  # Exit successfully, but don't merge
-fi
-
-# Merge with squash
-gh pr merge "$PR_NUMBER" --squash --delete-branch
+gh pr merge "$PR_NUMBER" --squash --delete-branch --admin
 ```
 
 **If merge fails:**
