@@ -2,6 +2,8 @@
 
 You are a security automation specialist. Execute the COMPLETE security pipeline autonomously from start to finish. Discover vulnerabilities, fix them, validate fixes, and report results. Handle everything. Fix everything fixable. Definition of done: **NO vulnerabilities remain unfixed** (except those explicitly flagged for human review).
 
+> **⚡ CONTEXT WARNING:** This skill is ~18K tokens. For best results, invoke `/sec-ship` at the start of a fresh conversation. If invoked mid-conversation, the orchestrator compensates by delegating ALL scanning to sub-agents (which start with clean context) and keeping its own footprint minimal — never read source files directly, only dispatch agents and collect their lean summaries.
+
 <!--
 ═══════════════════════════════════════════════════════════════════════════════
 DESIGN RATIONALE
@@ -132,11 +134,20 @@ The orchestrator coordinates agents but NEVER scans or fixes code directly. All 
 | Agent Type | Model | Why |
 |-----------|-------|-----|
 | File/route inventory | `haiku` | Listing API routes, counting files — no judgment |
-| Dependency CVE scanner | `sonnet` | Must assess vulnerability severity and applicability to this project |
-| Code vulnerability scanner | `sonnet` | Must understand if patterns are actually exploitable vs false positive |
-| RLS policy analyzer | `sonnet` | Must understand SQL semantics and authorization logic |
-| Rate limit analyzer | `sonnet` | Must assess if missing rate limiting is exploitable in context |
-| Input validation analyzer | `sonnet` | Must understand data flow to determine if missing validation is a real risk |
+| Dependency CVE scanner (Agent 1) | `sonnet` | Must assess vulnerability severity and applicability to this project |
+| Secret detection (Agent 2) | `sonnet` | Must distinguish high-entropy strings from legitimate code |
+| Code vulnerability scanner (Agents 3-6) | `sonnet` | Must understand if patterns are actually exploitable vs false positive |
+| Config & headers scanner (Agent 7) | `sonnet` | Must assess security header completeness in context |
+| AI/LLM security scanner (Agent 8) | `sonnet` | Must understand prompt injection vectors and AI output risks |
+| Mobile security scanner (Agent 9) | `sonnet` | Must assess mobile-specific risks in context |
+| Business logic scanner (Agent 10) | `sonnet` | Must understand workflow and state machine logic |
+| Logic correctness scanner (Agent 11) | `opus` | Must trace multi-file logic paths and integration contracts — highest complexity |
+| Cryptographic analyzer (Agent 12) | `sonnet` | Must identify weak crypto patterns and timing vulnerabilities |
+| Infrastructure config scanner (Agent 13) | `sonnet` | Must assess CI/CD and deployment config risks |
+| Data flow taint tracker (Agent 14) | `opus` | Must trace input across files/functions/DB — requires deep reasoning |
+| Regression test generator (Agent 15) | `sonnet` | Must write correct, runnable test code |
+| API drift detector (Agent 16) | `haiku` | Route inventory comparison — mostly mechanical |
+| Build artifact scanner (Agent 17) | `sonnet` | Must distinguish real secrets from false positives in build output |
 | Security fixer | `sonnet` | Must write correct security fixes that don't break functionality |
 | Report synthesizer | `opus` | Security report may be shared with stakeholders — must be accurate and professional |
 
@@ -337,7 +348,7 @@ Map all entry points:
 
 ---
 
-## STAGE 2: PARALLEL SECURITY SCANNING (8 Agents)
+## STAGE 2: PARALLEL SECURITY SCANNING (17 Agents)
 
 ### Agent 1: Dependencies & Supply Chain
 
@@ -780,6 +791,519 @@ const sanitizedData = sanitizeForDB(validated.data)
 | **Timing Attacks** | Non-constant-time comparison | SEC-ADV-004 |
 | **Cache Poisoning** | Unkeyed inputs | SEC-ADV-005 |
 | **Unicode Attacks** | Homoglyph confusion | SEC-ADV-006 |
+
+---
+
+### Agent 11: Logic Correctness, Integration Contracts & Admin Verification
+
+**This agent checks whether code is CORRECT — not whether it's exploitable.**
+- Agent 10 asks: "Can an attacker bypass payment?" (exploitability)
+- Agent 11 asks: "Does the payment webhook correctly update the user's tier?" (correctness)
+
+**Discovery-driven:** This agent first inventories the codebase (payment provider, AI service, email service, DB, scraping/ingestion, search, admin routes) using Stage 0 context, then applies the relevant checks below. Skip any category whose service is not detected.
+
+**Key File Patterns to Discover:**
+```
+**/api/**/webhook*              # Payment/service webhooks
+**/api/**/checkout*             # Checkout flows
+lib/*tier*|lib/*plan*|lib/*sub* # Tier/plan resolution
+lib/*usage*|lib/*quota*|lib/*limit*  # Usage tracking
+lib/*process*|lib/*pipeline*    # Content/data pipelines
+lib/*email*|lib/*mail*|lib/*send*   # Email integration
+lib/*transcri*|lib/*audio*      # Transcription services
+lib/*rss*|lib/*feed*|lib/*podcast*  # Feed/podcast ingestion
+**/manage/**|**/admin/**        # Admin dashboard
+**/api/admin/**                 # Admin API routes
+lib/*auth*|middleware*           # Auth + route guards
+**/api/cron*/**                 # Cron jobs
+**/api/account/**               # Account management
+```
+
+#### 11A: Internal Logic Correctness
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Silent Tier Downgrade** | Tier resolution function falls back to lowest tier on lookup failure — user silently loses paid features without error | SEC-LOGIC-001 |
+| **Time-Limited Pass Expiry Race** | Time-limited access (day pass, trial) expires during a long-running operation — starts as paid, finishes as free | SEC-LOGIC-002 |
+| **Usage Counter Atomicity** | Check-then-increment patterns for usage/quota tracking (should be atomic SQL, transaction, or RPC) | SEC-LOGIC-003 |
+| **Period Rollover Timezone** | Usage period calculation edge cases — midnight UTC vs user timezone causes double-count or missed reset | SEC-LOGIC-004 |
+| **Subscription Status Mapping** | Payment statuses like `past_due`/`unpaid` mapped to `canceled` with no grace period — immediate downgrade | SEC-LOGIC-005 |
+| **Cancellation End Date** | Subscription cancellation sets end date to `now()` instead of `currentPeriodEnd` — user loses remaining paid days | SEC-LOGIC-006 |
+| **Immediate Tier Strip** | Cancellation removes paid tier immediately instead of honoring remaining billing period | SEC-LOGIC-007 |
+| **Overlapping Entitlement Edge** | Multiple entitlements cleared on new subscription — if new subscription fails, user has no entitlement at all | SEC-LOGIC-008 |
+| **Cache Cross-Contamination** | In-memory or client-side cache leaking one user's data (chat, ratings, preferences) to another user | SEC-LOGIC-009 |
+| **Privileged Client Ownership** | Routes using admin/service DB client (RLS bypass) without verifying resource ownership before returning data | SEC-LOGIC-010 |
+| **Error Classification** | Raw error messages (stack traces, DB errors, third-party errors) leaking to end users instead of friendly messages | SEC-LOGIC-011 |
+| **Server-Side Limit Enforcement** | Feature limits (tags, bookmarks, items, collections) enforced only client-side — no server-side check on create/update | SEC-LOGIC-012 |
+
+#### 11B: Database Integration Contracts (Supabase/Prisma/Drizzle)
+
+**Apply checks matching detected DB client:**
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Silent Null Columns** | ORM/client returns `null` for non-existent or renamed columns in select — no error, just missing data | SEC-INTEG-001 |
+| **RPC/Procedure Return Assumptions** | DB function results cast without validation — renamed column or changed return type silently zeros values | SEC-INTEG-002 |
+| **Schema Drift** | Queries referencing wrong schema, stale table names, or columns that were renamed in a migration | SEC-INTEG-003 |
+| **Upsert Conflict Columns** | Upsert with wrong conflict/unique columns → silent duplicates instead of updates | SEC-INTEG-004 |
+| **Single Row Error Handling** | `.single()`/`.findUnique()` error — "no rows" vs "multiple rows" not distinguished, treated the same | SEC-INTEG-005 |
+| **Nullable Column Access** | Nullable column results accessed without null checks → runtime `Cannot read property of null` | SEC-INTEG-006 |
+| **Admin/Service Client in User Routes** | Privileged DB client (RLS bypass, service role) used in user-facing routes without ownership verification | SEC-INTEG-007 |
+
+#### 11C: Payment Provider Contracts (Polar/Stripe/Lemon Squeezy/Paddle)
+
+**Apply checks matching detected payment provider:**
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Webhook Idempotency** | No idempotency guard — duplicate webhook events re-run full handler (double tier change, double email) | SEC-INTEG-008 |
+| **Empty/Missing Product Config** | Empty string or missing product/price ID env vars → tier resolver returns undefined → silent downgrade | SEC-INTEG-009 |
+| **Checkout Metadata Trust** | User ID or metadata from checkout session — validated server-side or trusted from client payload? | SEC-INTEG-010 |
+| **Customer Linking Race** | Customer ID linking race on simultaneous webhooks (checkout + subscription created at same time) | SEC-INTEG-011 |
+| **Webhook Retry Behavior** | Returning 4xx when user not found — payment provider retries 4xx, creating retry storm noise (should return 200) | SEC-INTEG-012 |
+| **Side-Effect Blocking Core Update** | Non-critical side effect (email, analytics, logging) failure blocks the critical update (tier change, access grant) | SEC-INTEG-013 |
+
+#### 11D: AI/LLM Provider Contracts (OpenAI/Anthropic/OpenRouter/Gemini)
+
+**Apply checks matching detected AI provider:**
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **No Circuit Breaker** | Every AI request waits for full timeout — no circuit breaker to fail fast during provider outage | SEC-INTEG-014 |
+| **Retry Thundering Herd** | Retry without exponential backoff or jitter → all retries hit at same time during recovery | SEC-INTEG-015 |
+| **No Token Pre-Validation** | No input size/token estimation before request → oversized inputs waste credits and hit 413/400 errors | SEC-INTEG-016 |
+| **Invalid Model Fallback** | Model name configured externally (DB, env) — if invalid, does it crash or fall back gracefully? | SEC-INTEG-017 |
+| **Response Parsing Resilience** | AI response parsing — handles partial JSON, markdown-wrapped JSON, empty responses, refusals? | SEC-INTEG-018 |
+| **Prompt/Config Fetch Failure** | Prompt or AI config fetched from DB/remote — does pipeline crash or fall back to hardcoded default? | SEC-INTEG-019 |
+
+#### 11E: Content Ingestion & External Service Contracts
+
+**Apply checks matching detected scraping/transcription/ingestion services:**
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Timeout Mismatch** | External service timeout vs hosting platform function timeout — external finishes after host kills the function | SEC-INTEG-020 |
+| **Duplicate Callback** | Duplicate webhook/callback from external service → duplicate processing, duplicate DB entries, double usage count | SEC-INTEG-021 |
+| **Content Size Limit** | No content size limit before sending to AI — oversized content burns credits or hits API limits | SEC-INTEG-022 |
+| **Backoff Strategy** | External service retry using linear or no backoff (should be exponential with jitter) — hammers API during outage | SEC-INTEG-023 |
+| **Cascading Timeout** | Service A calls Service B — timeout of A shorter than B, or no coordination between them | SEC-INTEG-024 |
+| **Failure Counter Logic** | Consecutive failure counter — does success reset it? Or does it accumulate forever / reset at wrong time? | SEC-INTEG-025 |
+| **Permanent Disable on Transient Failure** | Auto-deactivation of recurring jobs (feeds, subscriptions) after transient outages — permanent disable from temporary issue | SEC-INTEG-026 |
+
+#### 11F: Email & Search Service Contracts
+
+**Apply checks matching detected email/search services:**
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Fire-and-Forget Correctness** | Email sent fire-and-forget — is this intentional, or does a downstream code path silently depend on delivery success? | SEC-INTEG-027 |
+| **Missing Client Initialization** | Email/search client factory throws if API key missing — do ALL callers handle this? Unhandled → 500 on every request | SEC-INTEG-028 |
+| **Sender Address Consistency** | Hardcoded `from`/sender address — consistent across all send calls, or some use different/invalid domains? | SEC-INTEG-029 |
+| **Cache Cold Start Assumption** | Search/enrichment cache lost on serverless cold start — code assumes warm cache? First request returns different results? | SEC-INTEG-030 |
+| **No Quota Tracking** | No API quota/usage tracking for external services — silent failure when quota exhausted mid-period | SEC-INTEG-031 |
+| **Graceful Degradation** | External enrichment service unreachable — does the pipeline degrade gracefully (skip enrichment) or crash entirely? | SEC-INTEG-032 |
+
+#### 11G: Cross-System Pipeline Coherence
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Feature Flag vs Limit Mismatch** | Boolean feature flags vs numeric limit caps — every client-side UI gate has a corresponding server-side enforcement check | SEC-LOGIC-013 |
+| **Content Type Lifecycle Parity** | All content/entity types have complete lifecycle: create + process + cache + export + delete (no orphaned type missing a step) | SEC-LOGIC-014 |
+| **Cron/Scheduled Job Auth** | Cron/scheduled routes validate a secret header or token — none are publicly accessible without authentication | SEC-LOGIC-015 |
+| **Pipeline Coverage Gaps** | Processing pipeline (moderation, AI analysis, indexing) covers ALL content types, not just the first one built | SEC-LOGIC-016 |
+| **Public Link Data Leakage** | Public/share links don't leak private data (chat history, user ratings, PII) to anonymous viewers | SEC-LOGIC-017 |
+| **Account Deletion Cascade** | Account deletion cascades to ALL user data across ALL user-related tables — no orphaned rows left behind | SEC-LOGIC-018 |
+| **Export-Deletion Parity** | Account data export scope matches deletion scope — everything that would be deleted is also included in export | SEC-LOGIC-019 |
+| **Orphaned Child Records** | Child/junction table rows orphaned when parent record is deleted — missing cascade, trigger, or cleanup job | SEC-LOGIC-020 |
+
+#### 11H: Admin Dashboard Verification (if admin routes detected)
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Multi-Layer Auth** | Every admin page and API route has layered auth: middleware + server-side check + role verification (not just one layer) | SEC-ADMIN-001 |
+| **PII Over-Exposure** | Admin APIs return more PII than necessary for the admin task (full email, name, IP in list views) | SEC-ADMIN-002 |
+| **No Audit Logging** | Admin actions (user ban, content moderation, config changes) not logged with admin ID, timestamp, and action details | SEC-ADMIN-003 |
+| **Inconsistent Rate Limiting** | Rate limiting on some admin routes but missing on others — all admin APIs should be rate-limited | SEC-ADMIN-004 |
+| **Cache Staleness Visibility** | Cached dashboard data with no "last updated" indicator — admin sees stale metrics without knowing they're stale | SEC-ADMIN-005 |
+| **Hardcoded/Placeholder Metrics** | Dashboard metrics hardcoded to `0` or placeholder values — never wired to real data source | SEC-ADMIN-006 |
+| **Return Shape Drift** | DB function/RPC return shape not validated — renamed column silently drops metric to zero with no error | SEC-ADMIN-007 |
+| **Missing Error Boundaries** | Admin pages missing error boundaries — single API failure causes white screen instead of graceful degradation | SEC-ADMIN-008 |
+| **Client-Side Direct DB Access** | Admin client components query DB directly instead of through admin API routes — bypasses server-side auth/logging | SEC-ADMIN-009 |
+| **Legal/Compliance Hold** | Flagged/reported content deletion must be soft-delete only — hard delete violates legal hold requirements | SEC-ADMIN-010 |
+
+**Auto-Fix Templates:**
+
+```typescript
+// FIX: Atomic Usage Increment (SEC-LOGIC-003)
+// WRONG: check-then-increment (race condition)
+const { count } = await db.from('usage').select('count').single()
+if (count < limit) {
+  await db.from('usage').update({ count: count + 1 })
+}
+
+// RIGHT: Atomic increment with limit check in SQL/RPC
+const { error } = await db.rpc('increment_usage', {
+  p_user_id: userId,
+  p_type: usageType,
+  p_limit: tierLimit
+})
+// RPC returns error if limit exceeded — no race window
+```
+
+```typescript
+// FIX: Webhook Idempotency (SEC-INTEG-008)
+// Store webhook event IDs, skip duplicates
+const existing = await db
+  .from('webhook_events')
+  .select('id')
+  .eq('event_id', event.id)
+  .single()
+
+if (existing.data) {
+  return new Response('Already processed', { status: 200 })
+}
+
+// Process webhook, then record it
+await processWebhook(event)
+await db.from('webhook_events').insert({
+  event_id: event.id,
+  event_type: event.type,
+  processed_at: new Date().toISOString()
+})
+```
+
+```typescript
+// FIX: Graceful External Service Degradation (SEC-INTEG-032)
+let enrichmentData = null
+try {
+  enrichmentData = await externalService.enrich(query)
+} catch (error) {
+  console.warn(`${serviceName} unavailable, proceeding without enrichment:`, error.message)
+  // Pipeline continues with null enrichment — degraded but functional
+}
+```
+
+---
+
+### Agent 12: Cryptographic & Randomness Analysis
+
+**Checks for weak cryptographic practices across any codebase.**
+
+**Discovery:** Scan for crypto usage patterns:
+```
+**/auth*|**/token*|**/session*     # Auth & token generation
+**/hash*|**/encrypt*|**/crypto*    # Crypto utilities
+**/password*|**/reset*|**/verify*  # Password handling
+lib/**|utils/**|helpers/**          # Utility code
+```
+
+#### 12A: Hashing & Password Storage
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Weak Password Hashing** | MD5, SHA1, SHA256 used for password storage (should be bcrypt/scrypt/argon2) | SEC-CRYPTO-001 |
+| **Low Cost Factor** | bcrypt rounds < 10 or scrypt N < 16384 — too fast to resist brute force | SEC-CRYPTO-002 |
+| **Hardcoded Salt** | Static salt value in source code instead of per-password random salt | SEC-CRYPTO-003 |
+| **Hash Without Salt** | `crypto.createHash()` for passwords without any salt | SEC-CRYPTO-004 |
+| **Weak Token Hashing** | API tokens/reset tokens stored as plaintext or weak hash in DB | SEC-CRYPTO-005 |
+
+#### 12B: Random Number Generation
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Math.random() for Security** | `Math.random()` used for tokens, session IDs, OTP codes, or any security-sensitive value | SEC-CRYPTO-006 |
+| **Predictable ID Generation** | Sequential or timestamp-based IDs for sensitive resources (should be UUIDv4 or CSPRNG) | SEC-CRYPTO-007 |
+| **Weak OTP/Code Generation** | Short OTP codes (<6 digits) or non-cryptographic random source | SEC-CRYPTO-008 |
+| **Missing CSPRNG** | `crypto.randomBytes()` or `crypto.randomUUID()` not used where needed | SEC-CRYPTO-009 |
+
+#### 12C: Comparison & Timing
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Non-Timing-Safe Comparison** | `===` or `==` used to compare secrets, tokens, API keys, HMAC signatures (should be `timingSafeEqual`) | SEC-CRYPTO-010 |
+| **Token Comparison Leak** | Early return on first mismatched byte reveals token length/prefix | SEC-CRYPTO-011 |
+| **Webhook Signature Check** | Webhook HMAC verification using string comparison instead of timing-safe | SEC-CRYPTO-012 |
+
+#### 12D: Encryption & Keys
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Hardcoded Encryption Keys** | Encryption keys as string literals in source code | SEC-CRYPTO-013 |
+| **Hardcoded IV/Nonce** | Static initialization vector — same IV reused across encryptions (breaks AES-CBC/GCM security) | SEC-CRYPTO-014 |
+| **Weak Algorithm** | DES, 3DES, RC4, or ECB mode used for encryption | SEC-CRYPTO-015 |
+| **Missing Key Rotation** | No mechanism to rotate encryption keys or API signing keys | SEC-CRYPTO-016 |
+| **JWT Weak Algorithm** | JWT signed with HS256 using short secret, or `none` algorithm accepted | SEC-CRYPTO-017 |
+
+**Auto-Fix:**
+- Replace `Math.random()` with `crypto.randomUUID()` or `crypto.randomBytes()`
+- Replace `===` with `crypto.timingSafeEqual()` for secret comparisons
+- Upgrade password hashing to bcrypt with cost factor 12+
+- Replace hardcoded IVs with `crypto.randomBytes(16)` per-encryption
+
+---
+
+### Agent 13: Infrastructure & Configuration Security
+
+**Scans deployment configs, CI/CD pipelines, and build settings for security issues.**
+
+**Discovery:** Detect infrastructure files:
+```
+vercel.json|netlify.toml|fly.toml   # Deployment config
+next.config.*|vite.config.*|nuxt.config.*  # Framework config
+.github/workflows/*.yml              # CI/CD pipelines
+Dockerfile|docker-compose*           # Container config
+.env.example|.env.*.example          # Env templates
+supabase/config.toml                 # Supabase config
+```
+
+#### 13A: Deployment Configuration
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Permissive CORS in Config** | `allowedOrigins: ["*"]` or overly broad origins in deployment config | SEC-INFRA-001 |
+| **Missing Security Headers** | Deployment config doesn't set HSTS, X-Frame-Options, CSP (relying on code only) | SEC-INFRA-002 |
+| **Debug Mode in Production** | `NODE_ENV=development` or `debug: true` in production config | SEC-INFRA-003 |
+| **Source Maps Enabled** | `productionBrowserSourceMaps: true` in Next.js config or equivalent | SEC-INFRA-004 |
+| **Exposed Server Info** | `poweredByHeader: true` (default in Next.js) leaks framework version | SEC-INFRA-005 |
+| **Permissive Rewrites/Redirects** | Wildcard rewrites that could proxy to internal services | SEC-INFRA-006 |
+
+#### 13B: CI/CD Pipeline Security
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Secrets in Workflow Files** | Hardcoded secrets, tokens, or credentials in `.github/workflows/*.yml` | SEC-INFRA-007 |
+| **Untrusted Input in Commands** | `${{ github.event.pull_request.title }}` used in `run:` (command injection via PR title) | SEC-INFRA-008 |
+| **Overly Permissive Permissions** | `permissions: write-all` or `contents: write` without justification | SEC-INFRA-009 |
+| **Missing Checkout Pin** | `uses: actions/checkout@v4` without SHA pin — vulnerable to supply chain attack | SEC-INFRA-010 |
+| **Self-Hosted Runner Risk** | Workflows using `runs-on: self-hosted` without security controls | SEC-INFRA-011 |
+| **No Dependency Review** | PRs merge without automated dependency vulnerability checks | SEC-INFRA-012 |
+
+#### 13C: Container & Build Security
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Root Container** | `Dockerfile` runs as root (no `USER` directive) | SEC-INFRA-013 |
+| **Secrets Copied to Image** | `COPY .env` or `COPY *.key` in Dockerfile — secrets baked into image | SEC-INFRA-014 |
+| **No .dockerignore** | Missing `.dockerignore` — `.env`, `.git`, `node_modules` may be included in image | SEC-INFRA-015 |
+| **Latest Tag** | `FROM node:latest` instead of pinned version — unpredictable builds | SEC-INFRA-016 |
+| **Build Secrets Exposed** | `ARG` used for secrets (visible in image history) instead of `--mount=type=secret` | SEC-INFRA-017 |
+
+#### 13D: Environment Variable Hygiene
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **NEXT_PUBLIC_ Secrets** | Sensitive values (API keys, DB URLs) exposed via `NEXT_PUBLIC_` prefix | SEC-INFRA-018 |
+| **Missing .env.example** | No `.env.example` to document required variables — new devs may misconfigure | SEC-INFRA-019 |
+| **Default/Placeholder Secrets** | `.env.example` contains real-looking values that could be used in production | SEC-INFRA-020 |
+| **Env Validation Missing** | No runtime validation that required env vars are present (app crashes cryptically) | SEC-INFRA-021 |
+
+**Auto-Fix:**
+- Set `poweredByHeader: false` in Next.js config
+- Disable `productionBrowserSourceMaps`
+- Add SHA pins to GitHub Actions
+- Add `USER node` to Dockerfiles
+- Create `.dockerignore` excluding `.env`, `.git`, `node_modules`
+
+---
+
+### Agent 14: Data Flow & Taint Tracking
+
+**Traces user input from entry point through transformations to dangerous sinks. Identifies taint chains where no sanitization exists in the full path.**
+
+**This is the most complex agent.** It doesn't check patterns in isolation — it follows data across files and functions.
+
+**Methodology:**
+1. Identify all **sources** (user input entry points)
+2. Identify all **sinks** (dangerous operations)
+3. Trace the path from each source to each reachable sink
+4. Check if sanitization/validation exists at any point in the path
+5. Report paths where unsanitized user input reaches a dangerous sink
+
+#### 14A: Source Identification
+
+| Source | Pattern | How Input Enters |
+|--------|---------|-----------------|
+| Request body | `req.body`, `request.json()`, `await req.json()` | POST/PUT/PATCH body |
+| URL params | `params.id`, `searchParams.get()`, `req.query` | URL path and query |
+| Headers | `req.headers.get()`, `headers()` | HTTP headers |
+| Cookies | `cookies().get()`, `req.cookies` | Cookie values |
+| File uploads | `formData.get('file')`, `req.formData()` | Uploaded content |
+| Database reads | `.select()`, `.findMany()`, user-generated content from DB | Stored user data |
+
+#### 14B: Sink Identification
+
+| Sink | Pattern | Risk |
+|------|---------|------|
+| **SQL** | String concatenation in `.from()`, `.rpc()`, raw SQL | SQL Injection |
+| **HTML** | `dangerouslySetInnerHTML`, `innerHTML`, `document.write()` | XSS |
+| **Redirect** | `redirect(userInput)`, `Response.redirect()`, `Location` header | Open Redirect |
+| **Shell** | `exec()`, `spawn()`, `execSync()` with user input | Command Injection |
+| **File system** | `readFile(userInput)`, `writeFile(userInput)` | Path Traversal |
+| **Fetch/HTTP** | `fetch(userInput)`, `axios.get(userInput)` | SSRF |
+| **Template** | Template literals with user input in prompts, emails | Template Injection |
+| **Eval** | `eval()`, `Function()`, `vm.runInContext()` | Code Execution |
+| **Log** | `console.log(userInput)`, `logger.info(userInput)` | Log Injection |
+
+#### 14C: Taint Chain Analysis
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Unsanitized Body → SQL** | Request body reaches raw SQL query without parameterization | SEC-TAINT-001 |
+| **Unsanitized Body → HTML** | Request body stored in DB, later rendered via `dangerouslySetInnerHTML` | SEC-TAINT-002 |
+| **URL Param → Redirect** | URL parameter used in redirect without origin validation | SEC-TAINT-003 |
+| **URL Param → File Path** | URL parameter used in file system operation without path sanitization | SEC-TAINT-004 |
+| **URL Param → Fetch** | URL parameter used in `fetch()` without SSRF protection | SEC-TAINT-005 |
+| **Body → Shell Command** | Request body reaches `exec()` or `spawn()` without escaping | SEC-TAINT-006 |
+| **Stored Data → HTML** | User-generated content from DB rendered without sanitization | SEC-TAINT-007 |
+| **Header → Log** | Request header written to log without CRLF stripping | SEC-TAINT-008 |
+| **Cookie → SQL** | Cookie value used in database query without validation | SEC-TAINT-009 |
+| **Upload → File System** | Uploaded filename used in file path without sanitization | SEC-TAINT-010 |
+| **DB Config → Eval** | Database-stored configuration (model names, prompts) used in dynamic code execution | SEC-TAINT-011 |
+| **Multi-Hop Taint** | Input passes through 3+ functions/files before reaching sink — each step looks safe individually | SEC-TAINT-012 |
+
+**Key Instruction:** When tracing, follow the data through:
+- Function calls (including async)
+- Database storage and retrieval (stored taint)
+- Template rendering
+- API responses consumed by other endpoints
+- Shared utility functions
+
+---
+
+### Agent 15: Security Regression Test Generation
+
+**After vulnerabilities are fixed, generate permanent test files that catch regressions.**
+
+**This agent runs AFTER the fix phase (Stage 4), not during scanning.** For each FIXED finding, create a test that would fail if the vulnerability is reintroduced.
+
+**Discovery:** Detect test framework:
+```bash
+# Check for test runner
+if grep -q "vitest" package.json; then TEST_RUNNER="vitest"
+elif grep -q "jest" package.json; then TEST_RUNNER="jest"
+elif grep -q "@playwright/test" package.json; then TEST_RUNNER="playwright"
+else TEST_RUNNER="vitest"  # Default
+fi
+```
+
+#### Test Generation Rules
+
+| Finding Category | Test Type | What to Assert |
+|-----------------|-----------|---------------|
+| **SQL Injection** | Unit test | Parameterized query handles `' OR 1=1--` without error |
+| **XSS** | Unit test | Output is sanitized (no `<script>` in rendered HTML) |
+| **Auth Bypass** | Integration test | Protected route returns 401 without token |
+| **IDOR** | Integration test | User A cannot read User B's resource |
+| **Rate Limiting** | Integration test | 50 rapid requests → 429 after threshold |
+| **RLS** | Database test | Query with User A's token returns only User A's data |
+| **Mass Assignment** | Integration test | Extra fields (`is_admin`, `role`) are stripped |
+| **SSRF** | Unit test | Private IPs rejected by URL validator |
+| **Prompt Injection** | Unit test | System prompt not leaked when asked |
+| **Missing Headers** | Integration test | Response includes CSP, HSTS, X-Frame-Options |
+| **Crypto Weakness** | Unit test | Timing-safe comparison used for token verification |
+| **Config Exposure** | Build test | Source maps disabled in production build |
+
+**Output:** Write test files to `__tests__/security/` or `tests/security/`:
+```
+__tests__/security/
+├── injection.test.ts       # SQLi, XSSi, Command injection regression
+├── auth.test.ts            # Auth bypass, IDOR, privilege escalation
+├── api.test.ts             # Rate limiting, mass assignment, CORS
+├── crypto.test.ts          # Hashing, timing-safe, random generation
+├── headers.test.ts         # Security headers presence
+└── ai-security.test.ts     # Prompt injection, output validation
+```
+
+**Each test includes a comment linking it to the finding ID:** `// Regression test for SEC-INJ-001`
+
+---
+
+### Agent 16: API Specification Drift Detection
+
+**Compares API documentation/specification against actual implementation to find shadow APIs and undocumented behavior.**
+
+**Discovery:** Check for API specs:
+```
+openapi.json|openapi.yaml|swagger.json|swagger.yaml
+docs/api/*|api-docs/*
+README.md (API section)
+```
+
+#### 16A: Route Inventory vs Documentation
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Shadow APIs** | Routes that exist in code but not in documentation — undocumented endpoints | SEC-DRIFT-001 |
+| **Ghost APIs** | Routes documented but not implemented — misleading docs | SEC-DRIFT-002 |
+| **Method Mismatch** | Route supports GET in code but docs say POST only (or vice versa) | SEC-DRIFT-003 |
+| **Auth Annotation Mismatch** | Route requires auth in code but docs don't mention it (or vice versa) | SEC-DRIFT-004 |
+
+#### 16B: Parameter & Schema Drift
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Undocumented Parameters** | Route accepts parameters not listed in docs — hidden functionality | SEC-DRIFT-005 |
+| **Missing Required Validation** | Docs say parameter is required but code has no validation for it | SEC-DRIFT-006 |
+| **Response Schema Mismatch** | Actual response includes fields not in docs (PII leak) or missing documented fields | SEC-DRIFT-007 |
+| **Deprecated But Active** | Endpoint marked deprecated in docs but still fully functional with no deprecation warning | SEC-DRIFT-008 |
+
+#### 16C: Version & Compatibility
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Old Version Still Active** | `/api/v1/users` still works alongside `/api/v2/users` — old version may have weaker security | SEC-DRIFT-009 |
+| **No Version Strategy** | API has no versioning — breaking changes affect all clients | SEC-DRIFT-010 |
+
+**If no API specification exists:** Inventory all routes, document their methods, parameters, and auth requirements. Flag this as SEC-DRIFT-011 (No API Documentation). Generate a basic route inventory as a starting point.
+
+---
+
+### Agent 17: Build Artifact & Secrets in Output
+
+**Scans build outputs, container images, CI logs, and deployment artifacts for leaked secrets.**
+
+**Discovery:** Check for build artifacts:
+```
+.next/|dist/|build/|out/            # Build output directories
+.github/workflows/*.yml              # CI pipeline logs
+Dockerfile|docker-compose*           # Container definitions
+.vercel/|.netlify/                   # Deployment cache
+```
+
+#### 17A: Build Output Scanning
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Secrets in Client Bundle** | API keys, service role keys, or private tokens in `.next/static/` JS files | SEC-BUILD-001 |
+| **Source Maps in Build** | `.map` files present in build output (full source code exposure) | SEC-BUILD-002 |
+| **Server Code in Client** | Server-only code or secrets leaked into client chunks via incorrect imports | SEC-BUILD-003 |
+| **Debug Info in Build** | `console.log`, `debugger`, or verbose error messages in production build | SEC-BUILD-004 |
+| **Environment Snapshot** | `.env` or environment variables captured in build output or build logs | SEC-BUILD-005 |
+
+#### 17B: CI/CD Output Scanning
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Echo Secrets in CI** | `echo $SECRET` or `printenv` in workflow steps — secrets visible in CI logs | SEC-BUILD-006 |
+| **Secrets in Artifact Upload** | CI uploads build artifacts that contain `.env` files or secret configs | SEC-BUILD-007 |
+| **Cache Poisoning Risk** | CI cache includes sensitive files that could be read by other workflows | SEC-BUILD-008 |
+| **No Secret Masking** | CI output doesn't mask secret values — visible in build logs | SEC-BUILD-009 |
+
+#### 17C: Container Image Scanning
+
+| Check | What to Find | Finding ID |
+|-------|--------------|------------|
+| **Env in Image** | `.env` files or secret configs baked into Docker image layers | SEC-BUILD-010 |
+| **Git History in Image** | `.git/` directory included in container image — full repo history with secrets | SEC-BUILD-011 |
+| **Node Modules in Image** | Full `node_modules/` in production image (increases attack surface) | SEC-BUILD-012 |
+| **Multi-Stage Leak** | Secrets from build stage leaked into production stage via `COPY --from=builder` | SEC-BUILD-013 |
+
+**Auto-Fix:**
+- Add `.map` files to build exclusion
+- Audit client bundle imports for server-only code
+- Add `COPY .dockerignore` patterns for `.env`, `.git`, `node_modules`
+- Replace `echo $SECRET` in CI with masked output
+- Use multi-stage Docker builds with minimal final stage
 
 ---
 

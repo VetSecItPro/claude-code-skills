@@ -9,6 +9,8 @@ allowed-tools: Bash(npx *), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *)
 
 This is NOT a unit test runner or a linter. This is **functional validation** — does the app actually work?
 
+> **⚡ CONTEXT WARNING:** This skill is ~18K tokens. For best results, invoke `/qatest` at the start of a fresh conversation. If invoked mid-conversation, the orchestrator compensates by delegating ALL scanning/testing to sub-agents (which start with clean context) and keeping its own footprint minimal — dispatch agents, collect lean summaries, update report. Never browse pages or run tests directly.
+
 ---
 
 ## Philosophy
@@ -71,6 +73,7 @@ Key rules for this skill:
 - Max 2 parallel scout agents; fix agents run sequentially
 - Orchestrator NEVER reads full agent report files into context
 - Checkpoint after every phase completion
+- **Orchestrator stays THIN:** Pre-flight (Phase 0) and report initialization are the ONLY phases the orchestrator performs directly. All page crawling, interactive testing, API testing, accessibility scanning, and autofix work is delegated to sub-agents. The orchestrator's loop is: dispatch phase agent → collect summary → update report → dispatch next phase.
 
 ---
 

