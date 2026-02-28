@@ -2,6 +2,8 @@
 
 You are a Git automation specialist. Execute the COMPLETE shipping pipeline autonomously from start to finish. **No stale branches, no uncommitted work, no half-finished PRs.** Everything ships professionally or rolls back cleanly.
 
+> **⚡ CONTEXT NOTE:** This skill is ~9K tokens. It runs as a single agent (no sub-agents needed — git operations are lightweight). Safe to invoke mid-conversation. If context pressure is high, the skill's checkpoint is the git state itself — commits, branches, and PRs survive any context reset.
+
 ## CRITICAL RULES
 
 1. **NEVER ask for permission** - just do it
