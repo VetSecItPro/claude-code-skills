@@ -1,6 +1,6 @@
 # Claude Code Skills Library
 
-**21 production-tested Claude Code skills** built from shipping real products at [Steel Motion LLC](https://steelmotionllc.com). All free, all open source.
+**23 production-tested Claude Code skills** built from shipping real products at [Steel Motion LLC](https://steelmotionllc.com). All free, all open source.
 
 A complete SDLC automation framework: plan, build, design, test, secure, and ship. Each skill is a structured prompt with execution phases, tool permissions, and built-in standards.
 
@@ -49,13 +49,13 @@ Skills are ordered by SDLC phase. Use them in sequence or pick what you need.
 | `/deps` | Auditing packages for outdated or vulnerable dependencies |
 | `/docs` | Generating decision-focused documentation |
 | `/blog` | Publishing blog posts with SEO and auto-deploy |
+| `/migrate` | Upgrading major versions of frameworks and libraries |
 
 ### Design
 
 | Skill | When to Use |
 |-------|-------------|
 | `/design` | Running a full UI/UX audit across all viewports |
-| `/landing-page` | Building or optimizing landing pages for conversion |
 
 ### Quality
 
@@ -78,10 +78,12 @@ Skills are ordered by SDLC phase. Use them in sequence or pick what you need.
 | `/compliance` | Auditing GDPR/CCPA compliance and data flows |
 | `/compliance-docs` | Generating compliance policies and control docs |
 
-### Ship
+### Ship & Operate
 
 | Skill | When to Use |
 |-------|-------------|
+| `/monitor` | Verifying a deployment is healthy after ship |
+| `/incident` | Responding to production incidents with structured triage |
 | `/launch` | Running pre-launch checks before going live |
 | `/gh-ship` | Shipping code from commit to merged PR in one command |
 
@@ -114,15 +116,15 @@ claude-code-skills/
 ├── LICENSE                    # MIT
 ├── install.sh                 # One-command installer
 └── .claude/
-    ├── commands/              # 21 skills
+    ├── commands/              # 23 skills
     │   ├── mdmp.md            # Plan
     │   ├── dev.md             # Build
     │   ├── db.md
     │   ├── deps.md
     │   ├── docs.md
     │   ├── blog.md
+    │   ├── migrate.md
     │   ├── design.md          # Design
-    │   ├── landing-page.md
     │   ├── smoketest.md       # Quality
     │   ├── cleancode.md
     │   ├── perf.md
@@ -134,7 +136,9 @@ claude-code-skills/
     │   ├── redteam.md
     │   ├── compliance.md
     │   ├── compliance-docs.md
-    │   ├── launch.md          # Ship
+    │   ├── monitor.md         # Ship & Operate
+    │   ├── incident.md
+    │   ├── launch.md
     │   └── gh-ship.md
     └── standards/             # 4 shared protocols
         ├── STATUS_UPDATES.md
