@@ -9,6 +9,14 @@ allowed-tools: Bash(npx *), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *)
 
 This is NOT a unit test runner or a linter. This is **functional validation** — does the app actually work?
 
+> **🖥️ COMPUTER USE AWARENESS:** When the `computer-use` MCP server is enabled (macOS only), this skill can supplement Playwright MCP testing with real visual verification. Use computer use for:
+> - **Visual regression checks** — open the app in a real browser and visually confirm pages render correctly (catches font rendering, subpixel layout, dark mode contrast issues that headless testing misses)
+> - **Theme verification** — toggle dark mode and visually confirm all components adapt (no white boxes, no contrast failures)
+> - **Responsive spot-checks** — resize the browser window and visually confirm layouts don't break
+> - **Animation/transition validation** — verify CSS animations play smoothly (impossible in headless mode)
+>
+> **Priority order:** Use Playwright MCP for all automated interaction (click, type, navigate, evaluate). Use computer use ONLY for visual verification steps that benefit from seeing the real rendered output. If computer use is not available, skip visual checks silently — do not fail.
+
 > **⚡ CONTEXT WARNING:** This skill is ~18K tokens. For best results, invoke `/qatest` at the start of a fresh conversation. If invoked mid-conversation, the orchestrator compensates by delegating ALL scanning/testing to sub-agents (which start with clean context) and keeping its own footprint minimal — dispatch agents, collect lean summaries, update report. Never browse pages or run tests directly.
 
 ---
@@ -665,6 +673,7 @@ The timestamped markdown report in `.qatest-reports/` is the definitive record. 
      - Verify theme persists across page navigation
      - Verify theme persists on reload (localStorage/cookie)
    - Check `prefers-color-scheme` media query support
+   - **Computer use enhancement:** If computer use is available, open the app in a real browser and visually verify dark mode rendering. Headless screenshots can miss subtle contrast issues, font rendering differences, and translucent overlay problems that are obvious to visual inspection. Navigate 3-5 key pages in dark mode and flag any visual anomalies.
 
 9. **Search functionality testing (if detected):**
    - If the app has a search feature:

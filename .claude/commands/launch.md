@@ -23,15 +23,17 @@ allowed-tools: Bash(pnpm *), Bash(npx *), Bash(npm *), Bash(yarn *), Bash(cat *)
 
 ## CRITICAL RULES
 
-1. **AUDIT + AUTO-FIX** — Sub-agents scan, fix everything they safely can, and report what was fixed vs. deferred. Full skill runs, not audit-only.
-2. **CONTEXT MANAGEMENT IS MANDATORY** — Follow the Context Management Protocol below. This skill WILL fail if context is not managed.
-3. **SEQUENTIAL SKILL EXECUTION** — Run one skill sub-agent at a time. Process its summary. Write to disk. Move to the next.
-4. **SUB-AGENT RETURN BUDGET: 500 TOKENS MAX** — Full reports go to disk. Only structured summaries come back to the orchestrator.
-5. **DISK IS THE SOURCE OF TRUTH** — The scorecard lives on disk, not in memory. If context resets, read the scorecard to resume.
-6. **SCORE HONESTLY** — A false GO is worse than a NO-GO. Users need truth before launch.
-7. **WRITE TO DISK IMMEDIATELY** — Report file created before any scanning starts.
-8. **DEFERRED TABLE IS MANDATORY** — Every finding that couldn't be auto-fixed gets a row in the Deferred Items table with a clear explanation of WHY it was deferred and WHAT needs to happen.
-9. **REAL-TIME UPDATES** — The markdown report on disk reflects current state at ALL times. Fixed items, deferred items, and in-progress items are updated as they happen, never batched to the end.
+1. **AUDIT + AUTO-FIX + RE-SWEEP** — Sub-agents scan, fix everything they safely can, and report what was fixed vs. deferred. Full skill runs, not audit-only. After all skills complete, re-sweep any domain below 90 to push closer to 100%.
+2. **BEFORE/AFTER TRACKING IS MANDATORY** — Every skill captures a BEFORE score (pre-fix) and AFTER score (post-fix). The final report and sitrep must show both, plus the delta. This is the primary way the user sees the value of running /launch.
+3. **CONTEXT MANAGEMENT IS MANDATORY** — Follow the Context Management Protocol below. This skill WILL fail if context is not managed.
+4. **SEQUENTIAL SKILL EXECUTION** — Run one skill sub-agent at a time. Process its summary. Write to disk. Move to the next.
+5. **SUB-AGENT RETURN BUDGET: 500 TOKENS MAX** — Full reports go to disk. Only structured summaries come back to the orchestrator.
+6. **DISK IS THE SOURCE OF TRUTH** — The scorecard lives on disk, not in memory. If context resets, read the scorecard to resume.
+7. **SCORE HONESTLY** — A false GO is worse than a NO-GO. Users need truth before launch.
+8. **WRITE TO DISK IMMEDIATELY** — Report file created before any scanning starts.
+9. **DEFERRED TABLE IS MANDATORY** — Every finding that couldn't be auto-fixed gets a row in the Deferred Items table with a clear explanation of WHY it was deferred and WHAT needs to happen.
+10. **REAL-TIME UPDATES** — The markdown report on disk reflects current state at ALL times. Fixed items, deferred items, and in-progress items are updated as they happen, never batched to the end.
+11. **TARGET 100%** — The goal is to get every domain to 100 or as close as possible. Do not stop at "good enough." If a domain scores 85, look at what's holding it back and fix it. Only defer items that genuinely require human decisions or architectural changes.
 
 ---
 
@@ -71,8 +73,8 @@ This file tracks:
   "skills_remaining": ["compliance", "perf", "a11y", "cleancode", "test-ship", "docs"],
   "unique_domains_completed": [],
   "scores": {
-    "sec-ship": { "score": 85, "critical": 0, "warnings": 3, "report": ".security-reports/..." },
-    "deps": { "score": 92, "critical": 0, "warnings": 1, "report": ".deps-reports/..." }
+    "sec-ship": { "score_before": 62, "score_after": 85, "delta": 23, "critical": 0, "warnings": 3, "fixed": 5, "deferred": 2, "report": ".security-reports/..." },
+    "deps": { "score_before": 88, "score_after": 92, "delta": 4, "critical": 0, "warnings": 1, "fixed": 2, "deferred": 1, "report": ".deps-reports/..." }
   }
 }
 ```
@@ -103,10 +105,9 @@ The sub-agent's `.security-reports/sec-ship-*.md` file might be 500+ lines. NEVE
 
 **Rule 6: Keep orchestrator messages lean.**
 
-When presenting progress to the user, keep it short:
+When presenting progress to the user, keep it short with before/after:
 ```
-Security audit complete: 85/100 (0 critical, 3 warnings)
-Full report: .security-reports/sec-ship-20260212-100500.md
+[1/8] Security: 62 → 85/100 (B) (+23) — 5 fixed, 2 deferred | .security-reports/sec-ship-20260212-100500.md
 Next: Dependencies...
 ```
 
@@ -235,8 +236,10 @@ INSTRUCTIONS:
 
 ---
 SKILL: [skill-name]
-SCORE: [0-100, POST-fix score — reflects state after auto-fixes applied]
-GRADE: [A/B/C/D/F]
+SCORE_BEFORE: [0-100, PRE-fix score — reflects state before any auto-fixes]
+SCORE_AFTER: [0-100, POST-fix score — reflects state after all auto-fixes applied]
+DELTA: [+N improvement, e.g., +15]
+GRADE: [A/B/C/D/F based on SCORE_AFTER]
 FIXED: [count of issues auto-fixed]
 DEFERRED: [count of issues that need manual work]
 CRITICAL_BLOCKERS: [count remaining AFTER fixes]
@@ -276,9 +279,9 @@ CRITICAL RULES:
    - Add any remaining critical blockers to the Critical Blockers table
    - Update the running totals (fixed count, deferred count, critical count, warning count)
    - The report on disk should ALWAYS reflect current state — never stale
-4. Report progress to user (one line):
+4. Report progress to user (one line with before/after):
    ```
-   [X/8] Security: 85/100 (B) — 5 fixed, 2 deferred, 0 critical remaining
+   [X/8] Security: 62 → 85/100 (B) (+23) — 5 fixed, 2 deferred, 0 critical remaining
    ```
 5. Proceed to next skill
 
@@ -429,9 +432,51 @@ Update scorecard JSON and report progress:
 
 ---
 
+### Phase 2.5: Re-Sweep — Push Toward 100%
+
+After all 8 skill runs and 5 domain checks complete, review the scorecard for any domain below 90. For each:
+
+1. **Read the deferred items** for that domain from the scorecard JSON
+2. **Evaluate each deferred item** — is it truly architectural/human-decision, or was the sub-agent being conservative?
+3. **If fixable:** Spawn a targeted sub-agent with a focused prompt:
+   ```
+   You are running a TARGETED FIX pass for [SKILL] in [PROJECT_PATH].
+
+   The initial audit scored this domain at [SCORE_AFTER]. These items were deferred:
+   [list deferred items]
+
+   Your job: Fix as many of these as safely possible. Be aggressive but correct.
+   For each item you fix, verify the build still passes.
+
+   Return ONLY:
+   ---
+   SKILL: [skill-name]
+   ADDITIONAL_FIXED: [count]
+   NEW_SCORE: [0-100]
+   ITEMS_FIXED:
+   1. [what was fixed]
+   STILL_DEFERRED:
+   1. [what + why it truly can't be auto-fixed]
+   ---
+   ```
+4. **Update scorecard** with new scores (the delta now reflects all fix passes)
+5. **Max 1 re-sweep per domain** — don't loop indefinitely
+
+**Skip re-sweep when:**
+- All domains are already 90+ (nothing to improve)
+- The `--quick` flag was passed
+- Context is running low (check remaining percentage)
+
+Report to user:
+```
+Re-sweep: [N] domains below 90 → targeting [domain1], [domain2]...
+```
+
+---
+
 ### Phase 3: Aggregate & Score
 
-After all 13 checks complete:
+After all checks (including re-sweep) complete:
 
 **3.1 Calculate weighted overall score:**
 
@@ -498,21 +543,23 @@ The report has been updated incrementally after every check. Now finalize it:
 
 ## Scorecard
 
-| # | Domain | Score | Grade | Critical | Warnings | Report |
-|---|--------|-------|-------|----------|----------|--------|
-| 1 | Security (sec-ship) | XX | X | X | X | .security-reports/... |
-| 2 | Dependencies (deps) | XX | X | X | X | .deps-reports/... |
-| 3 | Legal/Privacy (compliance) | XX | X | X | X | .compliance-reports/... |
-| 4 | Performance (perf) | XX | X | X | X | .perf-reports/... |
-| 5 | Accessibility (a11y) | XX | X | X | X | .a11y-reports/... |
-| 6 | Tech Debt (cleancode) | XX | X | X | X | .cleancode-reports/... |
-| 7 | Testing (test-ship) | XX | X | X | X | .test-reports/... |
-| 8 | Documentation (docs) | XX | X | X | X | .docs-reports/... |
-| 9 | Content Readiness | XX | X | X | X | (in this report) |
-| 10 | SEO & Meta | XX | X | X | X | (in this report) |
-| 11 | User Flow | XX | X | X | X | (in this report) |
-| 12 | Infrastructure | XX | X | X | X | (in this report) |
-| 13 | Payment & Subs | XX | X | X | X | (in this report) |
+| # | Domain | Before | After | Delta | Grade | Fixed | Deferred | Report |
+|---|--------|--------|-------|-------|-------|-------|----------|--------|
+| 1 | Security (sec-ship) | XX | XX | +XX | X | X | X | .security-reports/... |
+| 2 | Dependencies (deps) | XX | XX | +XX | X | X | X | .deps-reports/... |
+| 3 | Legal/Privacy (compliance) | XX | XX | +XX | X | X | X | .compliance-reports/... |
+| 4 | Performance (perf) | XX | XX | +XX | X | X | X | .perf-reports/... |
+| 5 | Accessibility (a11y) | XX | XX | +XX | X | X | X | .a11y-reports/... |
+| 6 | Tech Debt (cleancode) | XX | XX | +XX | X | X | X | .cleancode-reports/... |
+| 7 | Testing (test-ship) | XX | XX | +XX | X | X | X | .test-reports/... |
+| 8 | Documentation (docs) | XX | XX | +XX | X | X | X | .docs-reports/... |
+| 9 | Content Readiness | XX | XX | +XX | X | X | X | (in this report) |
+| 10 | SEO & Meta | XX | XX | +XX | X | X | X | (in this report) |
+| 11 | User Flow | XX | XX | +XX | X | X | X | (in this report) |
+| 12 | Infrastructure | XX | XX | +XX | X | X | X | (in this report) |
+| 13 | Payment & Subs | XX | XX | +XX | X | X | X | (in this report) |
+
+**Overall Before: XX/100 → After: XX/100 (+XX) | Total Fixed: XX | Total Deferred: XX**
 
 ---
 
@@ -636,36 +683,38 @@ For detailed findings, read the individual skill reports:
 ════════════════════════════════════════════════════════════════
 
   VERDICT:  [GO / CONDITIONAL / NO-GO]
-  SCORE:    XX/100 (Grade X)
+  SCORE:    XX → XX/100 (Grade X) (+XX improvement)
   PROFILE:  [SaaS App / Marketing Site / Mobile App]
+  FIXED:    [total count] issues auto-fixed
+  DEFERRED: [total count] items need human decision
 
 ────────────────────── SKILL AUDITS ────────────────────────────
-
-  Security          XX/100  [bar]  [status]
-  Dependencies      XX/100  [bar]  [status]
-  Legal/Privacy     XX/100  [bar]  [status]
-  Performance       XX/100  [bar]  [status]
-  Accessibility     XX/100  [bar]  [status]
-  Tech Debt         XX/100  [bar]  [status]
-  Testing           XX/100  [bar]  [status]
-  Documentation     XX/100  [bar]  [status]
+                              Before → After
+  Security          62 → 85   [████████████████░░░░]  +23
+  Dependencies      88 → 92   [██████████████████░░]  +4
+  Legal/Privacy     75 → 91   [██████████████████░░]  +16
+  Performance       70 → 88   [█████████████████░░░]  +18
+  Accessibility     55 → 82   [████████████████░░░░]  +27
+  Tech Debt         80 → 95   [███████████████████░]  +15
+  Testing           40 → 78   [███████████████░░░░░]  +38
+  Documentation     60 → 85   [█████████████████░░░]  +25
 
 ────────────────── UNIQUE DOMAIN CHECKS ────────────────────────
 
-  Content           XX/100  [bar]  [status]
-  SEO & Meta        XX/100  [bar]  [status]
-  User Flow         XX/100  [bar]  [status]
-  Infrastructure    XX/100  [bar]  [status]
-  Payments          XX/100  [bar]  [status]
+  Content           XX → XX   [bar]  +XX
+  SEO & Meta        XX → XX   [bar]  +XX
+  User Flow         XX → XX   [bar]  +XX
+  Infrastructure    XX → XX   [bar]  +XX
+  Payments          XX → XX   [bar]  +XX
 
 ────────────────────────────────────────────────────────────────
 
-  CRITICAL BLOCKERS: [count]
-  WARNINGS: [count]
+  CRITICAL BLOCKERS: [count remaining]
+  WARNINGS: [count remaining]
 
-  Top 3 Actions:
-  1. [action] → /[skill]
-  2. [action] → /[skill]
+  Top 3 Remaining Actions:
+  1. [action] → /[skill] (would bring score to ~XX)
+  2. [action] → /[skill] (would bring score to ~XX)
   3. [action] → Manual
 
   Full report: .launch-reports/launch-YYYY-MM-DD-HHMMSS.md
@@ -682,11 +731,21 @@ Use visual bars: `████████████████████�
 
 Be transparent about limitations:
 
-- **Does not verify production environment** — checks code-level readiness, not live infra.
-- **Does not test payment processing end-to-end** — checks code exists, not that Stripe works.
+- **Does not verify production environment** — checks code-level readiness, not live infra. *With computer use enabled, can open the deployed URL and visually verify pages load correctly.*
+- **Does not test payment processing end-to-end** — checks code exists, not that Stripe works. *With computer use enabled, can navigate to pricing page and verify Stripe checkout renders.*
 - **Does not validate email deliverability** — checks service is configured, not that emails arrive.
-- **Does not do visual design review** — `/design` requires visual inspection not possible in sub-agents.
+- **Does not do visual design review** — `/design` requires visual inspection not possible in sub-agents. *With computer use enabled, can open localhost and visually inspect pages for layout, dark mode, and responsive issues.*
 - **Deferred items need human judgment** — items marked DEFERRED were intentionally skipped because they require architectural decisions, business logic changes, or carry risk. Review them before acting.
+
+### Computer Use Enhancement (macOS only)
+
+When the `computer-use` MCP server is enabled, `/launch` can upgrade three of the above limitations:
+
+1. **Visual Design Spot-Check** — After all skill audits complete, open the dev server in a real browser and visually inspect the homepage + 2-3 key pages. Flag obvious layout breaks, dark mode issues, or rendering problems. This is NOT a full design audit — just a smoke test.
+2. **Production Verification** — If a production URL is known (from Vercel/deploy config), open it and verify the live site loads without errors.
+3. **Payment Page Validation** — Navigate to the pricing/checkout page and verify it renders correctly (do NOT submit real transactions).
+
+These checks run ONLY if computer use is available and approved. If not available, silently skip — do not fail or warn.
 
 ---
 

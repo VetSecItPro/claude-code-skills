@@ -326,6 +326,16 @@ if grep -q '"@playwright/test"' package.json 2>/dev/null; then E2E_RUNNER="playw
 elif grep -q '"cypress"' package.json 2>/dev/null; then E2E_RUNNER="cypress"
 else E2E_RUNNER="none"; fi
 
+# Computer use availability (macOS only, Claude Code research preview)
+# When available, use as a visual verification supplement AFTER Playwright tests.
+# Computer use cannot replace Playwright (not CI-compatible), but can catch visual
+# regressions that DOM-level testing misses (layout, rendering, dark mode appearance).
+COMPUTER_USE="false"
+# Detect if computer-use MCP server is enabled in this session
+if command -v claude 2>/dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
+  COMPUTER_USE="available"
+fi
+
 # Framework
 if grep -q '"next"' package.json 2>/dev/null; then FRAMEWORK="nextjs"
 elif grep -q '"svelte"' package.json 2>/dev/null; then FRAMEWORK="sveltekit"
@@ -759,6 +769,7 @@ $PM_RUN test --testPathPattern="api|integration"
 4. Test forms (validation, submission)
 5. Test error states
 6. Take screenshots of failures
+7. **Visual verification via computer use** (if available on macOS): After Playwright tests complete, use computer use to open the running app in a real browser and visually verify critical pages. This catches rendering issues that headless Playwright misses (font rendering, dark mode appearance, animation smoothness, layout at real DPI). Skip if computer use is not enabled.
 
 **Viewport Matrix:**
 
